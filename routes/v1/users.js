@@ -3,10 +3,10 @@ const router = express.Router();
 
 /**
  * @swagger
- * /signup-manager:
+ * /v1/users/signup-manager:
  *   post:
- *     summury: Send a request to register as an Event Manager.
- *     description: Send a request to register as an Event Manager. I will be notify with an email, if your request is accepted or denied.
+ *     summury: Send a request to register as an Events Manager.
+ *     description: Send a request to register as an Event Manager. You will be notify with an email, if your request is accepted or denied.
  *     requestBody:
  *       required: true
  *       content:
@@ -57,10 +57,45 @@ const router = express.Router();
  *                   format: binary
  *     responses:
  *       200:
- *         desctiption: request succesfully processed
+ *         description: Request succesfully processed.
  *       400:
- *         desctiption: Malformed request
+ *         description: Malformed request.
  */
 router.post('/signup-manager', function (req, res) {});
+
+/**
+ * @swagger
+ * /v1/users/signup-manager:
+ *   put:
+ *     description: Accept or deny the request to become Events Mangager.
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: string
+ *                 format: uuid
+ *                 description: The id of the request to approve.
+ *               approved:
+ *                 type: boolean
+ *                 description: If the request is approved or not.
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *       400:
+ *         description: Malformed request.
+ *       401:
+ *         description: Not Authorized.
+ */
+router.put('/signup-manager', function (req, res) {
+    res.send('respond with a resource');
+});
 
 module.exports = router;

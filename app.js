@@ -28,7 +28,7 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use('/api-docs/v1', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/v1', indexRouter);
+app.use('/v1/users', usersRouter);
 
 module.exports = app;
