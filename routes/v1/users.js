@@ -1,5 +1,10 @@
 const express = require('express');
+const multer = require('multer');
+
+const Manager = require('../../models/managers');
+
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 /**
  * @swagger
@@ -20,37 +25,38 @@ const router = express.Router();
  *                 example: Bar Bello
  *               email:
  *                 type: string
- *                 format: email
  *                 description: The user's email.
  *                 example: mario.rossi@gmail.com
- *               country:
- *                 type: string
- *                 description: The country where the local is.
- *                 example: Italy
- *               city:
- *                 type: string
- *                 description: The city where the local is.
- *                 example: Trento
- *               street:
- *                 type: string
- *                 description: The street where the local is.
- *                 example: corso tre novembre
- *               number:
- *                 type: integer
- *                 description: The house number of the local.
- *                 example: 15
- *               cap:
- *                 type: string
- *                 description: The cap of the city.
- *                 example: 38122
+ *               address:
+ *                 type: object
+ *                 description: The address of the local.
+ *                 properties:
+ *                   country:
+ *                     type: string
+ *                     description: The country where the local is.
+ *                     example: Italy
+ *                   city:
+ *                     type: string
+ *                     description: The city where the local is.
+ *                     example: Trento
+ *                   street:
+ *                     type: string
+ *                     description: The street where the local is.
+ *                     example: corso tre novembre
+ *                   number:
+ *                     type: integer
+ *                     description: The house number of the local.
+ *                     example: 15
+ *                   cap:
+ *                     type: string
+ *                     description: The cap of the city.
+ *                     example: 38122
  *               localType:
  *                 type: string
  *                 description: The type of the local.
  *                 example: Bar
  *               photos:
  *                 type: array
- *                 minItems: 1
- *                 maxItems: 5
  *                 description: Photos of the local.
  *                 items:
  *                   type: string
@@ -60,8 +66,36 @@ const router = express.Router();
  *         description: Request succesfully processed.
  *       400:
  *         description: Malformed request.
+ *       501:
+ *         description: Internal server error.
  */
-router.post('/signup-manager', function (req, res) {});
+router.post(
+    '/signup-manager',
+    upload.array('photos', 5),
+    async function (req, res) {
+        try {
+            const { email, address } = req.body;
+
+            const user = await Manager.findOne({ email });
+            if (user) return res.status(400).send('Email already used');
+
+            const result = await Manager.create({
+                ...req.body,
+                address: JSON.parse(address),
+                photos: req.files
+                    .filter((p) => p.mimetype.startsWith('image'))
+                    .map((p) => ({
+                        data: p.buffer,
+                        contentType: p.mimetype,
+                    })),
+            });
+
+            res.status(200).json(result);
+        } catch (e) {
+            res.status(501).send(e);
+        }
+    }
+);
 
 /**
  * @swagger

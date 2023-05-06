@@ -2,6 +2,9 @@ const express = require('express');
 const logger = require('morgan');
 const swaggerUI = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
+const mongoose = require('mongoose');
+
+require('dotenv').config();
 
 const indexRouter = require('./routes/v1/index');
 const usersRouter = require('./routes/v1/users');
@@ -18,6 +21,11 @@ const swaggerOptionsV1 = {
 };
 
 const swaggerDocument = swaggerJsDoc(swaggerOptionsV1);
+
+mongoose
+    .connect(process.env.MONGODB_URL)
+    .then(() => console.log('Connected to mongodb'))
+    .catch((e) => console.error('Cannot connect to mongodb', e));
 
 const app = express();
 
