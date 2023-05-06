@@ -47,7 +47,7 @@ const router = express.Router();
  *                 type: string
  *                 description: The type of the local.
  *                 example: Bar
- *               localPhotos:
+ *               photos:
  *                 type: array
  *                 minItems: 1
  *                 maxItems: 5
