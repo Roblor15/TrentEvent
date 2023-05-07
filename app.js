@@ -24,8 +24,7 @@ const swaggerDocument = swaggerJsDoc(swaggerOptionsV1);
 
 mongoose
     .connect(process.env.MONGODB_URL)
-    .then(() => console.log('Connected to mongodb'))
-    .catch((e) => console.error('Cannot connect to mongodb', e));
+    .then(() => console.log('Connected to mongodb'));
 
 const app = express();
 

@@ -27,6 +27,7 @@ const managerSchema = new Schema({
             cap: { type: String, required: [true] },
         },
         required: true,
+        _id: false,
     },
     localType: { type: String, enum: ['Bar', 'Discoteca'], required: [true] },
     photos: [
@@ -43,6 +44,7 @@ const managerSchema = new Schema({
             // in futuro
             // from: { type: Schema.Types.ObjectId, ref: 'Supervisor' },
             from: { type: Schema.Types.ObjectId },
+            _id: false,
         },
     },
 });

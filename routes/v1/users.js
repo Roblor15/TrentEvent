@@ -127,9 +127,25 @@ router.post(
  *         description: Malformed request.
  *       401:
  *         description: Not Authorized.
+ *       501:
+ *         description: Internal server error.
  */
-router.put('/signup-manager', function (req, res) {
-    res.send('respond with a resource');
+router.put('/signup-manager', async function (req, res) {
+    try {
+        const { id, approved } = req.body;
+
+        const user = await Manager.findByIdAndUpdate(id, {
+            approvation: { approved, when: Date.now() },
+        });
+
+        if (user) {
+            res.status(200).send('success');
+        } else {
+            res.status(400).send('id not valid');
+        }
+    } catch (e) {
+        res.status(501).send(e);
+    }
 });
 
 module.exports = router;
