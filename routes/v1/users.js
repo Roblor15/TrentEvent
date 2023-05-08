@@ -4,6 +4,8 @@ const multer = require('multer');
 const Manager = require('../../models/managers');
 
 const router = express.Router();
+
+// save files in memory
 const upload = multer({ storage: multer.memoryStorage() });
 
 /**
@@ -74,15 +76,22 @@ router.post(
     upload.array('photos', 5),
     async function (req, res) {
         try {
+            // retrieve email and address from body
             const { email, address } = req.body;
 
+            // control if already exists a user with the same email
             const user = await Manager.findOne({ email });
             if (user) return res.status(400).send('Email already used');
 
+            // create a Manager instance
             const result = await Manager.create({
+                // with all attributes of body
                 ...req.body,
+                // convert address from String to Object
                 address: JSON.parse(address),
+                // retrieve photos sended
                 photos: req.files
+                    // filter images
                     .filter((p) => p.mimetype.startsWith('image'))
                     .map((p) => ({
                         data: p.buffer,
@@ -132,12 +141,15 @@ router.post(
  */
 router.put('/signup-manager', async function (req, res) {
     try {
+        // retrieve id and approved from body
         const { id, approved } = req.body;
 
+        // find and update the manager
         const user = await Manager.findByIdAndUpdate(id, {
             approvation: { approved, when: Date.now() },
         });
 
+        // control if exists a user with that id
         if (user) {
             res.status(200).send('success');
         } else {
