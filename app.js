@@ -7,7 +7,6 @@ const mongoose = require('mongoose');
 // retrieve environments variables from .env file
 require('dotenv').config();
 
-const indexRouter = require('./routes/v1/index');
 const usersRouter = require('./routes/v1/users');
 
 // options for the openapi documentation

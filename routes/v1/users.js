@@ -160,4 +160,32 @@ router.put('/signup-manager', async function (req, res) {
     }
 });
 
+/**
+ * @swagger
+ * /v1/users/login:
+ *   put:
+ *     description: Login for the user.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: The username of the user.
+ *               password:
+ *                 type: string
+ *                 description: The password off the user.
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *       400:
+ *         description: Malformed request.
+ *       501:
+ *         description: Internal server error.
+ */
+router.post('');
+
 module.exports = router;
