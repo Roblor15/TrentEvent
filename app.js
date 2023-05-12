@@ -1,6 +1,8 @@
 const express = require('express');
 const logger = require('morgan');
 
+require('dotenv').config();
+
 const indexRouter = require('./routes/v1/index');
 const usersRouter = require('./routes/v1/users');
 
