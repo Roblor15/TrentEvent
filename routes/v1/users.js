@@ -162,6 +162,58 @@ router.put('/signup-manager', async function (req, res) {
 
 /**
  * @swagger
+ * /v1/users/signup-user
+ *   put:
+ *      description: Registration for becoming a user
+ *      requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: the name of the user
+ *                 example: Mario
+ *               surname:
+ *                 type: string
+ *                 description: the surname of the user
+ *                 example: Rossi
+ *               email:
+ *                 type: string
+ *                 description: the email of the user
+ *                 example: Mario.Rossi@gmail.com
+ *               password:
+ *                 type: string
+ *                 description: the password of the account
+ *                 example: ciao1234
+ *               data:
+ *                 type: object
+ *                 description: the birth data of the user
+ *                 properties:
+ *                   year:
+ *                     type: integer
+ *                     maximum: 2023
+ *                   month:
+ *                     type: integer
+ *                     minimum: 1
+ *                     maximum: 12
+ *                   day:
+ *                     type:
+ *                     minimum: 1
+ *                     maximum: 31
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *       400:
+ *         description: Malformed request.
+ *       501:
+ *         description: Internal server error.
+ */
+
+/**
+ * @swagger
  * /v1/users/login:
  *   put:
  *     description: Login for the user.
@@ -186,6 +238,6 @@ router.put('/signup-manager', async function (req, res) {
  *       501:
  *         description: Internal server error.
  */
-router.post('');
+router.post('/login', function (req, res) {});
 
 module.exports = router;
