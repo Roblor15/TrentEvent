@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 
 const Manager = require('../../models/managers');
-const Partecipant = require('../../models/participant')
+const Partecipant = require('../../models/participant');
 
 const router = express.Router();
 
@@ -239,23 +239,25 @@ router.put('/signup-manager', async function (req, res) {
  *       501:
  *         description: Internal server error.
  */
-router.get('/usercheck', function(req, res) {
+router.get('/usercheck', function (req, res) {
     try {
-        User.findOne({username: req.query.username}, function(err, user){
-            if(err) {
-            console.log(err);
+        User.findOne({ username: req.query.username }, function (err, user) {
+            if (err) {
+                console.log(err);
             }
             var message;
-            if(user) {
-            console.log(user)
-                message = "user exists";
-                console.log(message)
+            if (user) {
+                console.log(user);
+                message = 'user exists';
+                console.log(message);
             } else {
-                message= "user doesn't exist";
-                console.log(message)
+                message = "user doesn't exist";
+                console.log(message);
             }
-            res.json({message: message});
+            res.json({ message: message });
         });
+    } catch (e) {
+        res.status(501).send(e);
     }
 });
 module.exports = router;
