@@ -261,6 +261,28 @@ router.post('/signup-user', async function (req, res) {
  *       501:
  *         description: Internal server error.
  */
-router.post('/login', function (req, res) {});
-
+router.get('/usercheck', function (req, res) {
+    try {
+        Partecipant.findOne(
+            { username: req.query.username },
+            function (err, user) {
+                if (err) {
+                    console.log(err);
+                }
+                let message;
+                if (user) {
+                    console.log(user);
+                    message = 'user exists';
+                    console.log(message);
+                } else {
+                    message = "user doesn't exist";
+                    console.log(message);
+                }
+                res.json({ message: message });
+            }
+        );
+    } catch (e) {
+        res.status(501).send(e);
+    }
+});
 module.exports = router;
