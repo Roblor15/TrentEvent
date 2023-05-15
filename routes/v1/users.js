@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 
 const Manager = require('../../models/managers');
+const Partecipant = require('../../models/partecipant');
 
 const router = express.Router();
 
@@ -162,10 +163,10 @@ router.put('/signup-manager', async function (req, res) {
 
 /**
  * @swagger
- * /v1/users/signup-user
+ * /v1/users/signup-user:
  *   put:
- *      description: Registration for becoming a user
- *      requestBody:
+ *     description: Registration for becoming a user
+ *     requestBody:
  *       required: true
  *       content:
  *         multipart/form-data:
@@ -211,6 +212,28 @@ router.put('/signup-manager', async function (req, res) {
  *       501:
  *         description: Internal server error.
  */
+router.post('/signup-user', async function (req, res) {
+    try {
+        //retrieve username and email from body
+        const { username, email } = req.body;
+
+        // control if already exists a user with the same email or username
+        const user = {
+            email: await Partecipant.findOne({ email }),
+            username: await Partecipant.findOne({ username }),
+        };
+        if (user.email) return res.status(400).send('Email already used');
+        if (user.username) return res.status(400).send('Username already used');
+
+        // create a Partecipant instance with all attributes of body
+        const result = await Partecipant.create(req.body);
+
+        //return Partecipant instance
+        res.status(200).json(result);
+    } catch (e) {
+        res.status(501).send(e);
+    }
+});
 
 /**
  * @swagger

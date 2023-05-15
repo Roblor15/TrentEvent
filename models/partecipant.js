@@ -22,9 +22,10 @@ const partecipantSchema = new Schema({
         type: String,
         required: [true, 'Password not provided'],
         bcrypt: true,
+        //da aggiungere limitazioni della password
     },
 });
 
-managerSchema.plugin(bcrypt);
+partecipantSchema.plugin(bcrypt);
 
 module.exports = mongoose.model('Partecipant', partecipantSchema);
