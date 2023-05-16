@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 
 const Manager = require('../../models/managers');
-const Partecipant = require('../../models/partecipant');
+const Partecipant = require('../../models/participant');
 
 const router = express.Router();
 
@@ -165,8 +165,8 @@ router.put('/signup-manager', async function (req, res) {
  * @swagger
  * /v1/users/signup-user:
  *   put:
- *     description: Registration for becoming a user
- *     requestBody:
+ *      description: Registration for becoming a user
+ *      requestBody:
  *       required: true
  *       content:
  *         multipart/form-data:
@@ -212,28 +212,6 @@ router.put('/signup-manager', async function (req, res) {
  *       501:
  *         description: Internal server error.
  */
-router.post('/signup-user', async function (req, res) {
-    try {
-        //retrieve username and email from body
-        const { username, email } = req.body;
-
-        // control if already exists a user with the same email or username
-        const user = {
-            email: await Partecipant.findOne({ email }),
-            username: await Partecipant.findOne({ username }),
-        };
-        if (user.email) return res.status(400).send('Email already used');
-        if (user.username) return res.status(400).send('Username already used');
-
-        // create a Partecipant instance with all attributes of body
-        const result = await Partecipant.create(req.body);
-
-        //return Partecipant instance
-        res.status(200).json(result);
-    } catch (e) {
-        res.status(501).send(e);
-    }
-});
 
 /**
  * @swagger
@@ -261,28 +239,58 @@ router.post('/signup-user', async function (req, res) {
  *       501:
  *         description: Internal server error.
  */
-router.get('/usercheck', function (req, res) {
+
+router.post('/login', async function (req, res) {
     try {
-        Partecipant.findOne(
-            { username: req.query.username },
-            function (err, user) {
-                if (err) {
-                    console.log(err);
-                }
-                let message;
-                if (user) {
-                    console.log(user);
-                    message = 'user exists';
-                    console.log(message);
-                } else {
-                    message = "user doesn't exist";
-                    console.log(message);
-                }
-                res.json({ message: message });
-            }
-        );
+        const user = await Partecipant.findOne({
+            email: req.body.email,
+        }).exec();
+        if (!user) res.json({ success: false, message: 'User not found' });
+        if (user.password != req.body.password)
+            res.json({ success: false, message: 'Wrong password' });
+
+        // user authenticated -> create a token
+        const payload = {
+            email: user.email,
+            id: user._id,
+            other_data: encrypted_in_the_token,
+        };
+        const options = { expiresIn: 86400 }; // expires in 24 hours
+        const token = jwt.sign(payload, process.env.SUPER_SECRET, options);
+
+        res.json({
+            success: true,
+            message: 'Enjoy your token!',
+            token: token,
+            email: user.email,
+            id: user._id,
+            self: 'api/v1/' + user._id,
+        });
     } catch (e) {
         res.status(501).send(e);
     }
 });
+
 module.exports = router;
+/** 
+const tokenChecker = function (req, res, next) {
+    // header or url parameters or post parameters
+    var token =
+        req.body.token || req.query.token || req.headers['x-access-token'];
+    if (!token)
+        res.status(401).json({ success: false, message: 'No token provided.' });
+    // decode token, verifies secret and checks expiration
+    jwt.verify(token, process.env.SUPER_SECRET, function (err, decoded) {
+        if (err)
+            res.status(403).json({
+                success: false,
+                message: 'Token not valid',
+            });
+        else {
+            // if everything is good, save in req object for use in other routes
+            req.loggedUser = decoded;
+            next();
+        }
+    });
+};
+*/
