@@ -17,12 +17,13 @@ const partecipantSchema = new Schema({
             message: (props) => `${props.value} is not a valid email!`,
         },
     },
-
     password: {
         type: String,
-        required: [true, 'Password not provided'],
         bcrypt: true,
         //da aggiungere limitazioni della password
+    },
+    idExteralApi: {
+        type: String,
     },
 });
 

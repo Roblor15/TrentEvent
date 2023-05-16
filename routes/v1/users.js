@@ -1,5 +1,7 @@
 const express = require('express');
 const multer = require('multer');
+const { getGoogleAuthLink, verify } = require('../../google-auth');
+const mongoose = require('mongoose');
 
 const Manager = require('../../models/managers');
 const Partecipant = require('../../models/participant');
@@ -267,6 +269,36 @@ router.post('/login', async function (req, res) {
             self: 'api/v1/' + user._id,
         });
     } catch (e) {
+        res.status(501).send(e);
+    }
+});
+
+router.get('/google-url', function (_req, res) {
+    res.json({ url: getGoogleAuthLink() });
+});
+
+router.post('/google-auth', async function (req, res) {
+    try {
+        const googleUser = await verify(req.body.credential);
+
+        console.log(googleUser);
+
+        if (googleUser === undefined) throw new Error('user not valid');
+
+        let user = await Partecipant.findOne({ idExteralApi: googleUser.sub });
+
+        if (!user) {
+            user = await Partecipant.create({
+                username: 'roblor',
+                email: googleUser.email,
+                idExteralApi: googleUser.sub,
+            });
+        }
+
+        // TODO: return token
+        res.status(200).send('ok');
+    } catch (e) {
+        console.log(e);
         res.status(501).send(e);
     }
 });

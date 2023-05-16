@@ -3,6 +3,7 @@ const logger = require('morgan');
 const swaggerUI = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 const mongoose = require('mongoose');
+const cors = require('cors');
 
 // retrieve environments variables from .env file
 require('dotenv').config();
@@ -37,6 +38,8 @@ app.use(logger('dev'));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+app.use(cors());
 
 // serve api documentation on /api-docs/v1
 app.use('/api-docs/v1', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
