@@ -1,7 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { getGoogleAuthLink, verify } = require('../../google-auth');
-const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 
 const Manager = require('../../models/managers');
 const Partecipant = require('../../models/participant');
@@ -255,7 +255,7 @@ router.post('/login', async function (req, res) {
         const payload = {
             email: user.email,
             id: user._id,
-            other_data: encrypted_in_the_token,
+            other_data: 'encrypted_in_the_token',
         };
         const options = { expiresIn: 86400 }; // expires in 24 hours
         const token = jwt.sign(payload, process.env.SUPER_SECRET, options);
