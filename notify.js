@@ -88,6 +88,12 @@ async function listLabels(auth) {
     });
 }
 
+/*
+ * Encode a message in a Buffer
+ *
+ * @param {string} message
+ * @return {Buffer}
+ */
 function encodeMessage(message) {
     return Buffer.from(message)
         .toString('base64')
@@ -96,12 +102,14 @@ function encodeMessage(message) {
         .replace(/=+$/, '');
 }
 
+// Create email from options
 async function createMail(options) {
     const mailComposer = new MailComposer(options);
     const message = await mailComposer.compile().build();
     return encodeMessage(message);
 }
 
+// Send email from options
 async function sendMail(options) {
     const auth = await authorize();
     const gmail = google.gmail({ version: 'v1', auth });
