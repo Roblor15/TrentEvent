@@ -4,7 +4,7 @@ const { getGoogleAuthLink, verify } = require('../../google-auth');
 const jwt = require('jsonwebtoken');
 
 const Manager = require('../../models/managers');
-const Partecipant = require('../../models/participant');
+const Participant = require('../../models/participant');
 
 const router = express.Router();
 
@@ -242,11 +242,34 @@ router.put('/signup-manager', async function (req, res) {
  *         description: Internal server error.
  */
 
+router.post('/signup-user', async function (req, res) {
+    try {
+        //retrieve username and email from body
+        const { username, email } = req.body;
+
+        // control if already exists a user with the same email or username
+        const user = {
+            email: await Participant.findOne({ email }),
+            username: await Participant.findOne({ username }),
+        };
+        if (user.email) return res.status(400).send('Email already used');
+        if (user.username) return res.status(400).send('Username already used');
+
+        // create a Partecipant instance with all attributes of body
+        const result = await Participant.create(req.body);
+
+        //return Partecipant instance
+        res.status(200).json(result);
+    } catch (e) {
+        res.status(501).send(e);
+    }
+});
+
 router.post('/login', async function (req, res) {
     try {
-        const user = await Partecipant.findOne({
+        const user = await Participant.findOne({
             email: req.body.email,
-        }).exec();
+        });
         if (!user) res.json({ success: false, message: 'User not found' });
         if (user.password != req.body.password)
             res.json({ success: false, message: 'Wrong password' });
@@ -285,10 +308,10 @@ router.post('/google-auth', async function (req, res) {
 
         if (googleUser === undefined) throw new Error('user not valid');
 
-        let user = await Partecipant.findOne({ idExteralApi: googleUser.sub });
+        let user = await Participant.findOne({ idExteralApi: googleUser.sub });
 
         if (!user) {
-            user = await Partecipant.create({
+            user = await Participant.create({
                 username: 'roblor',
                 email: googleUser.email,
                 idExteralApi: googleUser.sub,
