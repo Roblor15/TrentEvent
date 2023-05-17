@@ -255,10 +255,10 @@ router.post('/signup-user', async function (req, res) {
         if (user.email) return res.status(400).send('Email already used');
         if (user.username) return res.status(400).send('Username already used');
 
-        // create a Partecipant instance with all attributes of body
+        // create a Participant instance with all attributes of body
         const result = await Participant.create(req.body);
 
-        //return Partecipant instance
+        //return Participant instance
         res.status(200).json(result);
     } catch (e) {
         res.status(501).send(e);
