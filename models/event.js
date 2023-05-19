@@ -3,7 +3,11 @@ const bcrypt = require('mongoose-bcrypt');
 const { Schema } = mongoose;
 
 // decidere se separare le foto
-const create_eventSchema = new Schema({
+const eventSchema = new Schema({
+    eventid: {
+        type: Number,
+        required: true,
+    },
     date: {
         type: Date,
         required: true,
@@ -38,8 +42,18 @@ const create_eventSchema = new Schema({
         enum: ['musica', 'discoteca', `all'aperto`, 'al chiuso'],
         required: true,
     },
+    event_manager: {
+        type: Schema.Types.ObjectId,
+        //ref: 'Manager'
+    },
+    participants_list: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'Participant',
+        },
+    ],
 });
 
-create_eventSchema.plugin(bcrypt);
+eventSchema.plugin(bcrypt);
 
-module.exports = mongoose.model('Manager', create_eventSchema);
+module.exports = mongoose.model('Manager', eventSchema);

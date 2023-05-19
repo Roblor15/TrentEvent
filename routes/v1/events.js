@@ -11,24 +11,20 @@ const router = express.Router();
 // save files in memory
 // da cambiare l'indirizzo di memoria --> const upload = multer({ storage: multer.memoryStorage() });
 
-let eventi =[
-  {
-    "data:" 
-    "tytle:" 
+// let eventi =[
+//   {
+//     "data:"
+//     "tytle:"
 
+//   }
 
-  }
-
-
-]
-
-
+// ]
 
 /**
  * @swagger
  * /v1/events/:
  *   get:
- *     description: Accept or deny the request of an event's info       
+ *     description: Accept or deny the request of an event's info
  *     responses:
  *       200:
  *         content:
@@ -45,7 +41,7 @@ let eventi =[
  *                   name:
  *                     type: string
  *                     description: The name of the event
- *                 
+ *
  *                   approved:
  *                     type: boolean
  *                     description: If the request is approved or not.
@@ -55,6 +51,5 @@ let eventi =[
  *       401:
  *         description: Not Authorized.
  *       501:
- *         description: Internal server error.
- */
-
+ *         description: Internal server error.
+ */
