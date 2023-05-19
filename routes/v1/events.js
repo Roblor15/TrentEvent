@@ -113,19 +113,15 @@ const router = express.Router();
  *                       type: string
  *                       format: binary
  *
-=======
  *
  *                   approved:
  *                     type: boolean
  *                     description: If the request is approved or not.
-
  *         description: Request succesfully processed.
  *       400:
  *         description: Malformed request.
  *       401:
  *         description: Not Authorized.
  *       501:
-
  *         description: Internal server error.
-
  */
