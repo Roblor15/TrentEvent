@@ -97,9 +97,9 @@ const router = express.Router();
  *                     type:integer
  *                     description: The limit number of people that can participate to the event
  *                   price:
- *                     type: ------------------------
+ *                     type: float
  *                     description: The price of the event (zero for a free event)
- *                     example: 12,5
+ *                     example: 12,50
  *                   eventDescription:
  *                     type:string
  *                     description: The description and explanation of the event
@@ -113,11 +113,19 @@ const router = express.Router();
  *                       type: string
  *                       format: binary
  *
+=======
+ *
+ *                   approved:
+ *                     type: boolean
+ *                     description: If the request is approved or not.
+
  *         description: Request succesfully processed.
  *       400:
  *         description: Malformed request.
  *       401:
  *         description: Not Authorized.
  *       501:
+
  *         description: Internal server error.
+
  */
