@@ -6,7 +6,7 @@ const router = express.Router();
  * @swagger
  * /v1/events/:
  *   get:
- *     description: Accept or deny the request of an event's info
+ *     description: Return a list of events
  *     responses:
  *       200:
  *         content:
@@ -112,16 +112,11 @@ const router = express.Router();
  *                     items:
  *                       type: string
  *                       format: binary
- *
- *
- *                   approved:
- *                     type: boolean
- *                     description: If the request is approved or not.
  *         description: Request succesfully processed.
  *       400:
  *         description: Malformed request.
  *       401:
  *         description: Not Authorized.
  *       501:
- *         description: Internal server error.
+ *         description: Internal server error.
  */
