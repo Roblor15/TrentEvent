@@ -15,7 +15,6 @@ const router = express.Router();
  *               type: array
  *               items:
  *                 type: object
- *                 required: [data, startHour, endHour, name, address, manager, eventDescription, category]
  *                 properties:
  *                   id:
  *                     type: string
