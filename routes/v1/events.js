@@ -1,6 +1,7 @@
 const express = require('express');
 
 const router = express.Router();
+const Events = require('../../models/events'); // yet to do
 
 /**
  * @swagger
@@ -123,7 +124,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /v1/users/create-event:
+ * /v1/users/create-events:
  *  post:
  *      summary: A manager creates an event
  *      description: A manager creates an event and the participant can subsribe to it
@@ -229,9 +230,9 @@ const router = express.Router();
  *                          photos:
  *                              type: array
  *                              description: Photos of the event
- *                          items:
- *                              type: string
- *                              format: binary
+ *                              items:
+ *                                  type: string
+ *                                  format: binary
  *      responses:
  *          200:
  *              description: Request succesfully processed.
@@ -240,3 +241,21 @@ const router = express.Router();
  *          501:
  *              description: Internal server error.
  */
+router.post('/create-event', async function (req, res) {
+    try {
+        // create the event
+        const result = await Events.create({
+            // requests all the attributes of the body
+            ...req.body,
+            photos: req.files
+                .filter((p) => p.mimetype.startsWith('image'))
+                .map((p) => ({
+                    data: p.buffer,
+                    contentType: p.mimetype,
+                })),
+        });
+        res.status(200).json(result);
+    } catch (e) {
+        res.status(501).send(e);
+    }
+});
