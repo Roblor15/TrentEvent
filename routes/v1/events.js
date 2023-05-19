@@ -94,7 +94,7 @@ const router = express.Router();
  *                     minimum: 0
  *                     description: The minimum age to access the event
  *                   limit_people:
- *                     type:integer
+ *                     type: integer
  *                     description: The limit number of people that can participate to the event
  *                   price:
  *                     type: float
@@ -177,6 +177,7 @@ const router = express.Router();
  *                          name:
  *                              type: string
  *                              description: The name of the event
+ *                              example: Bar Stella
  *                          address:
  *                              type: object
  *                              description: The address of the local.
@@ -204,13 +205,15 @@ const router = express.Router();
  *                          manager:
  *                              type:string
  *                              description: The name of the event's manager
+ *                              example: Mario Rossi
  *                          ageLimit:
  *                              type: integer
  *                              minimum: 0
  *                              description: The minimum age to access the event
  *                          limit_people:
- *                              type:integer
+ *                              type: integer
  *                              description: The limit number of people that can participate to the event
+ *                              example: 500
  *                          price:
  *                              type: float
  *                              description: The price of the event (zero for a free event)
@@ -218,9 +221,11 @@ const router = express.Router();
  *                          eventDescription:
  *                              type:string
  *                              description: The description and explanation of the event
+ *                              example: In questo locale si festeggia l'arrivo dell'estate
  *                          category:
  *                              type: string
  *                              description: The category of the event (1 or more categories)
+ *                              example: music
  *                          photos:
  *                              type: array
  *                              description: Photos of the event
