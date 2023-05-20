@@ -259,3 +259,16 @@ router.post('/create-event', async function (req, res) {
         res.status(501).send(e);
     }
 });
+
+router.post('/subscribe-event', async function (req, res) {
+    try {
+        const event = await Events.findOne(req.eventid);
+        if (event.participant_list.lenght == event.person_limit)
+            return res
+                .status(200)
+                .json({ success: false, message: 'event is full' });
+        //if (event.cost != 0), indirizza al pagamento
+    } catch (e) {
+        res.status(501).send(e);
+    }
+});
