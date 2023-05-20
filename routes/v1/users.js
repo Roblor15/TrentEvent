@@ -1,11 +1,11 @@
 const express = require('express');
 const multer = require('multer');
-const { getGoogleAuthLink, verify } = require('../../google-auth');
 const jwt = require('jsonwebtoken');
 
 const Manager = require('../../models/managers');
 const Participant = require('../../models/participant');
 const sendMail = require('../../notify');
+const { verify } = require('../../google-auth');
 
 const router = express.Router();
 
@@ -60,10 +60,10 @@ router.post(
             // retrieve email and address from body
             const { email, address } = req.body;
 
-            // TODO: controls email also in Participant
+            // control if already exists a manager or a participant with the same email
+            let user = await Manager.findOne({ email });
+            if (!user) user = await Participant.findOne({ email });
 
-            // control if already exists a user with the same email
-            const user = await Manager.findOne({ email });
             if (user)
                 return res
                     .status(200)
@@ -87,16 +87,14 @@ router.post(
                     })),
             });
 
-            const ob = result._doc;
-
             res.status(200).json({
                 success: true,
                 message: "Manager's request accepted",
                 manager: {
-                    localName: ob.localName,
-                    email: ob.email,
-                    address: ob.address,
-                    localType: ob.localType,
+                    localName: result.localName,
+                    email: result.email,
+                    address: result.address,
+                    localType: result.localType,
                 },
             });
         } catch (e) {
@@ -120,6 +118,7 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
+ *             required: ["id", "approved"]
  *             properties:
  *               id:
  *                 type: string
@@ -163,8 +162,6 @@ router.put('/signup-manager', async function (req, res) {
 
         if (!user) throw new Error('User no found');
 
-        const ob = user._doc;
-
         // control if exists a user with that id
         if (user.verifiedEmail) {
             user.approvation = {
@@ -194,10 +191,10 @@ router.put('/signup-manager', async function (req, res) {
                 success: true,
                 message: "Manager's request updated",
                 manager: {
-                    localName: ob.localName,
-                    email: ob.email,
-                    address: ob.address,
-                    localType: ob.localType,
+                    localName: user.localName,
+                    email: user.email,
+                    address: user.address,
+                    localType: user.localType,
                 },
             });
         } else {
@@ -205,10 +202,10 @@ router.put('/signup-manager', async function (req, res) {
                 success: false,
                 message: "Manager's request was already supervised",
                 manager: {
-                    localName: ob.localName,
-                    email: ob.email,
-                    address: ob.address,
-                    localType: ob.localType,
+                    localName: user.localName,
+                    email: user.email,
+                    address: user.address,
+                    localType: user.localType,
                 },
             });
         }
@@ -230,30 +227,12 @@ router.put('/signup-manager', async function (req, res) {
  *            allOf:
  *              - $ref: '#/components/schemas/Participant'
  *              - type: object
+ *                required: ["email","password","birthDate"]
  *                properties:
- *                  email:
- *                    type: string
- *                    description: the email of the user
- *                    example: Mario.Rossi@gmail.com
  *                  password:
  *                    type: string
  *                    description: the password of the account
  *                    example: ciao1234
- *                  birthDate:
- *                    type: object
- *                    description: the birth data of the user
- *                    properties:
- *                      year:
- *                        type: integer
- *                        maximum: 2023
- *                      month:
- *                        type: integer
- *                        minimum: 1
- *                        maximum: 12
- *                      day:
- *                        type:
- *                        minimum: 1
- *                        maximum: 31
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -280,7 +259,9 @@ router.post('/signup-user', async function (req, res) {
 
         // control if already exists a user with the same email or username
         const user = {
-            email: await Participant.findOne({ email }),
+            email:
+                (await Participant.findOne({ email })) ||
+                (await Manager.findOne({ email })),
             username: await Participant.findOne({ username }),
         };
         if (user.email)
@@ -298,12 +279,10 @@ router.post('/signup-user', async function (req, res) {
             verifiedEmail: false,
             birthDate: new Date(
                 req.body.birthDate.year,
-                req.body.birthDate.month - 1,
+                req.body.birthDate.month,
                 req.body.birthDate.day
             ),
         });
-
-        const ob = result._doc;
 
         //       await sendMail({
         //           to: user.email,
@@ -317,9 +296,11 @@ router.post('/signup-user', async function (req, res) {
             success: true,
             message: 'User correctly signed up',
             participant: {
-                name: ob.name,
-                surname: ob.surname,
-                username: ob.username,
+                name: result.name,
+                surname: result.surname,
+                username: result.username,
+                email: result.email,
+                birthDate: result.birthDate,
             },
         });
     } catch (e) {
@@ -339,6 +320,7 @@ router.post('/signup-user', async function (req, res) {
  *           schema:
  *             oneOf:
  *               - type: object
+ *                 required: ["email", "password"]
  *                 properties:
  *                   email:
  *                     type: string
@@ -347,6 +329,7 @@ router.post('/signup-user', async function (req, res) {
  *                     type: string
  *                     description: The password of the user.
  *               - type: object
+ *                 required: ["username", "password"]
  *                 properties:
  *                   username:
  *                     type: string
@@ -444,16 +427,16 @@ router.put('/verify-email/:id', async function (req, res) {
         });
 
         if (user) {
-            const ob = user._doc;
-
             // return Participant instance
             res.status(200).json({
                 success: true,
                 message: "User's email verified",
                 participant: {
-                    name: ob.name,
-                    surname: ob.surname,
-                    username: ob.username,
+                    name: user.name,
+                    surname: user.surname,
+                    username: user.username,
+                    email: user.email,
+                    birthDate: user.birthDate,
                 },
             });
         } else {
@@ -478,6 +461,7 @@ router.put('/verify-email/:id', async function (req, res) {
  *         application/json:
  *           schema:
  *             type: object
+ *             required: credential
  *             properties:
  *               credential:
  *                 type: string
@@ -567,6 +551,7 @@ const tokenChecker = function (req, res, next) {
  *   schemas:
  *     Response:
  *       type: object
+ *       required: [ "success", "message" ]
  *       properties:
  *         success:
  *           type: boolean
@@ -591,8 +576,29 @@ const tokenChecker = function (req, res, next) {
  *           type: string
  *           description: the username of the user
  *           example: mario_rossi18
+ *         email:
+ *           type: string
+ *           description: the email of the user
+ *           example: Mario.Rossi@gmail.com
+ *         birthDate:
+ *           type: object
+ *           description: the birth data of the user
+ *           properties:
+ *             year:
+ *               type: integer
+ *               maximum: 2023
+ *             month:
+ *               type: integer
+ *               description: January is 0
+ *               minimum: 0
+ *               maximum: 11
+ *             day:
+ *               type:
+ *               minimum: 1
+ *               maximum: 31
  *     Manager:
  *       type: object
+ *       required: ["localName", "email", "address", "localType"]
  *       properties:
  *         localName:
  *           type: string

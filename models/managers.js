@@ -22,6 +22,15 @@ const managerSchema = new Schema({
         type: Boolean,
         require: true,
     },
+    password: {
+        type: String,
+        bcrypt: true,
+        validate: {
+            validator: (v) => v.length > 5,
+            message: () =>
+                'Password too short. Required more than 5 characters',
+        },
+    },
     address: {
         type: {
             country: { type: String, required: [true] },
@@ -42,11 +51,9 @@ const managerSchema = new Schema({
     ],
     approvation: {
         type: {
-            //finire
             approved: { type: Boolean, default: false },
             when: Date,
-            // in futuro
-            // from: { type: Schema.Types.ObjectId, ref: 'Supervisor' },
+            // TODO: from: { type: Schema.Types.ObjectId, ref: 'Supervisor' },
             from: { type: Schema.Types.ObjectId },
             _id: false,
         },
