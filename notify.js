@@ -123,7 +123,7 @@ async function sendMail(options) {
         },
     });
 
-    return res.data.id;
+    return res;
 }
 
 //   sendMail({

@@ -25,7 +25,7 @@ const participantSchema = new Schema({
             message: (props) => `${props.value} is not a valid email!`,
         },
     },
-    veifiedEmail: {
+    verifiedEmail: {
         type: Boolean,
         require: true,
     },

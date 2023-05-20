@@ -87,6 +87,15 @@ router.post(
                     })),
             });
 
+            await sendMail({
+                to: result.email,
+                subject: 'Conferma Email 🚀',
+                html: `<p>Ciao ${result.localName},</p>
+                   <p>Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a>.<br/>
+                    Verrai ricontattato con la rispsta di un supervisore.</p>`,
+                textEncoding: 'base64',
+            });
+
             res.status(200).json({
                 success: true,
                 message: "Manager's request accepted",
@@ -169,23 +178,28 @@ router.put('/signup-manager', async function (req, res) {
                 when: Date.now(),
             };
 
-            //           let text;
-            //           if (approved) {
-            //               const newPassword = 'ciao';
-            //
-            //               user.password = newPassword;
-            //
-            //               text = 'yes';
-            //           } else {
-            //               text = 'no';
-            //           }
+            let html;
+            if (approved) {
+                const newPassword = 'ciao';
 
-            //           await sendMail({
-            //               to: user.email,
-            //               subject: 'Response',
-            //               text,
-            //               textEncoding: 'base64',
-            //           });
+                user.password = newPassword;
+
+                html = `<p>Ciao ${user.localName},<br/>
+                        La tua richiesta per diventare Organizzatore di eventi è stata accettata.</p>
+                        <p>Per accedere al tuo account usa le credenziali:<br/>
+                        <b>email</b>: ${user.email}<br/>
+                        <b>password</b>: ${newPassword}</p>`;
+            } else {
+                html = `<p>Ciao ${user.localName},</p>
+                        <p>La tua richiesta per diventare Organizzatore di eventi è stata rifiutata.</p>`;
+            }
+
+            await sendMail({
+                to: user.email,
+                subject: 'Richiesta Organizzatore di eventi',
+                html,
+                textEncoding: 'base64',
+            });
 
             res.status(200).json({
                 success: true,
@@ -200,7 +214,7 @@ router.put('/signup-manager', async function (req, res) {
         } else {
             res.status(200).json({
                 success: false,
-                message: "Manager's request was already supervised",
+                message: "Manager's email is not confermed",
                 manager: {
                     localName: user.localName,
                     email: user.email,
@@ -284,12 +298,13 @@ router.post('/signup-user', async function (req, res) {
             ),
         });
 
-        //       await sendMail({
-        //           to: user.email,
-        //           subject: 'Response',
-        //           text: `Gentile ${result.name} ${result.surname}\nLa sua iscrizione è andata a buon fine. Per confermare questa email vada al link http://localhost:3000/v1/users/verify-email/${result._id}`,
-        //           textEncoding: 'base64',
-        //       });
+        await sendMail({
+            to: result.email,
+            subject: 'Conferma Email 🚀',
+            html: `<p>Ciao ${result.name} ${result.surname},</p>
+                   <p>La tua iscrizione è andata a buon fine. Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a></p>`,
+            textEncoding: 'base64',
+        });
 
         // return Participant instance
         res.status(200).json({
@@ -359,9 +374,20 @@ router.post('/signup-user', async function (req, res) {
  */
 router.post('/login', async function (req, res) {
     try {
-        const user = await Participant.findOne({
-            username: req.body.username,
-        });
+        let user,
+            type = 'Participant';
+
+        if (req.body.username) {
+            user = await Participant.findOne({
+                username: req.body.username,
+            });
+        } else {
+            user = await Participant.findOne({ email: req.body.email });
+            if (!user) {
+                user = await Manager.findOne({ email: req.body.email });
+                type = 'Manager';
+            }
+        }
         if (!user)
             return res
                 .status(200)
@@ -370,11 +396,11 @@ router.post('/login', async function (req, res) {
             return res
                 .status(200)
                 .json({ success: false, message: 'Wrong password' });
-
         // user authenticated -> create a token
         const payload = {
             email: user.email,
             id: user._id,
+            type,
         };
         const options = { expiresIn: 86400 }; // expires in 24 hours
         const token = jwt.sign(payload, process.env.JWT_SECRET, options);
@@ -392,7 +418,7 @@ router.post('/login', async function (req, res) {
 /**
  * @swagger
  * /v1/users/verify-email/{userId}:
- *   put:
+ *   get:
  *     description: Verify the email of a user.
  *     parameters:
  *       - in: path
@@ -407,12 +433,7 @@ router.post('/login', async function (req, res) {
  *         content:
  *           application/json:
  *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/Response'
- *                 - type: object
- *                   properties:
- *                     participant:
- *                       $ref: '#/components/schemas/Participant'
+ *               $ref: '#/components/schemas/Response'
  *       501:
  *         description: Internal server error.
  *         content:
@@ -420,24 +441,21 @@ router.post('/login', async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.put('/verify-email/:id', async function (req, res) {
+router.get('/verify-email/:id', async function (req, res) {
     try {
-        const user = await Participant.findByIdAndUpdate(req.params.id, {
-            verifiedEmail: true,
-        });
+        const user =
+            (await Participant.findByIdAndUpdate(req.params.id, {
+                verifiedEmail: true,
+            })) ||
+            (await Manager.findByIdAndUpdate(req.params.id, {
+                verifiedEmail: true,
+            }));
 
         if (user) {
             // return Participant instance
             res.status(200).json({
                 success: true,
                 message: "User's email verified",
-                participant: {
-                    name: user.name,
-                    surname: user.surname,
-                    username: user.username,
-                    email: user.email,
-                    birthDate: user.birthDate,
-                },
             });
         } else {
             res.status(200).json({
@@ -507,6 +525,7 @@ router.post('/google-auth', async function (req, res) {
         const payload = {
             email: user.email,
             id: user._id,
+            type: 'Participant',
         };
         const options = { expiresIn: 86400 }; // expires in 24 hours
         const token = jwt.sign(payload, process.env.JWT_SECRET, options);
@@ -563,6 +582,7 @@ const tokenChecker = function (req, res, next) {
  *           example: Error
  *     Participant:
  *       type: object
+ *       required: ["name", "surname", "username", "email" , "bithDate"]
  *       properties:
  *         name:
  *           type: string
