@@ -2,7 +2,15 @@ const mongoose = require('mongoose');
 const bcrypt = require('mongoose-bcrypt');
 const { Schema } = mongoose;
 
-const partecipantSchema = new Schema({
+const participantSchema = new Schema({
+    name: {
+        type: String,
+        required: [true, 'Name not provided'],
+    },
+    surname: {
+        type: String,
+        required: [true, 'Surname not provided'],
+    },
     username: {
         type: String,
         required: [true, 'Username not provided'],
@@ -17,6 +25,10 @@ const partecipantSchema = new Schema({
             message: (props) => `${props.value} is not a valid email!`,
         },
     },
+    veifiedEmail: {
+        type: Boolean,
+        require: true,
+    },
     password: {
         type: String,
         bcrypt: true,
@@ -25,8 +37,19 @@ const partecipantSchema = new Schema({
     idExteralApi: {
         type: String,
     },
+    birthDate: {
+        type: Date,
+        required: [true, 'Date of birth not provided'],
+    },
 });
 
-partecipantSchema.plugin(bcrypt);
+participantSchema.pre('validate', function (next) {
+    if (!(this.password || this.idExteralApi)) {
+        next(new Error('Password not provided'));
+    } else {
+        next();
+    }
+});
+participantSchema.plugin(bcrypt);
 
-module.exports = mongoose.model('Partecipant', partecipantSchema);
+module.exports = mongoose.model('Participant', participantSchema);

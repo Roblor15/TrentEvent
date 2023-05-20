@@ -18,6 +18,10 @@ const managerSchema = new Schema({
             message: (props) => `${props.value} is not a valid email!`,
         },
     },
+    verifiedEmail: {
+        type: Boolean,
+        require: true,
+    },
     address: {
         type: {
             country: { type: String, required: [true] },

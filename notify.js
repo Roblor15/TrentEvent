@@ -116,7 +116,7 @@ async function sendMail(options) {
 
     const rawMessage = await createMail(options);
 
-    const res = await gmail.users.messages.send({
+    const res = gmail.users.messages.send({
         userId: 'me',
         resource: {
             raw: rawMessage,
