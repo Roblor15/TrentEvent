@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const Manager = require('../../models/managers');
 const Participant = require('../../models/participant');
@@ -184,9 +185,8 @@ router.put('/signup-manager', async function (req, res) {
             // create body of the email
             let html;
             if (approved) {
-                // TODO: random password
                 // create a new password for the user
-                const newPassword = 'ciao';
+                const newPassword = generatePassword(12);
 
                 user.password = newPassword;
 
@@ -398,6 +398,19 @@ router.post('/login', async function (req, res) {
             user = await Participant.findOne({ email: req.body.email });
             if (!user) {
                 user = await Manager.findOne({ email: req.body.email });
+
+                // control if manager was approved
+                if (!user.approvation === undefined)
+                    return res.status(200).json({
+                        success: false,
+                        message: "Manager's request is not approved yet",
+                    });
+                if (!user.approvation.approved === undefined)
+                    return res.status(200).json({
+                        success: false,
+                        message: "Manager's request is not approved",
+                    });
+
                 // change type to Manager
                 type = 'Manager';
             }
@@ -561,6 +574,14 @@ router.post('/google-auth', async function (req, res) {
         res.status(501).send(e.toString());
     }
 });
+
+const generatePassword = (
+    length = 20,
+    wishlist = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$'
+) =>
+    Array.from(crypto.randomFillSync(new Uint32Array(length)))
+        .map((x) => wishlist[x % wishlist.length])
+        .join('');
 
 module.exports = router;
 /** 

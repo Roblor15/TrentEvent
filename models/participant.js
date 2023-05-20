@@ -32,11 +32,7 @@ const participantSchema = new Schema({
     password: {
         type: String,
         bcrypt: true,
-        validate: {
-            validator: (v) => v.length > 5,
-            message: () =>
-                'Password too short. Required more than 5 characters',
-        },
+        minLength: 5,
     },
     idExteralApi: {
         type: String,
