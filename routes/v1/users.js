@@ -87,6 +87,7 @@ router.post(
                     })),
             });
 
+            // send email with the link to conferm the email address
             await sendMail({
                 to: result.email,
                 subject: 'Conferma Email 🚀',
@@ -96,6 +97,7 @@ router.post(
                 textEncoding: 'base64',
             });
 
+            // response with main fields of manager
             res.status(200).json({
                 success: true,
                 message: "Manager's request accepted",
@@ -169,17 +171,21 @@ router.put('/signup-manager', async function (req, res) {
         // find and update the manager
         const user = await Manager.findById(id);
 
+        // throw an error if user not found
         if (!user) throw new Error('User no found');
 
-        // control if exists a user with that id
+        // control if the email address is confermed
         if (user.verifiedEmail) {
             user.approvation = {
                 approved,
                 when: Date.now(),
             };
 
+            // create body of the email
             let html;
             if (approved) {
+                // TODO: random password
+                // create a new password for the user
                 const newPassword = 'ciao';
 
                 user.password = newPassword;
@@ -194,6 +200,7 @@ router.put('/signup-manager', async function (req, res) {
                         <p>La tua richiesta per diventare Organizzatore di eventi è stata rifiutata.</p>`;
             }
 
+            // send the email
             await sendMail({
                 to: user.email,
                 subject: 'Richiesta Organizzatore di eventi',
@@ -201,6 +208,7 @@ router.put('/signup-manager', async function (req, res) {
                 textEncoding: 'base64',
             });
 
+            // response with main fields of manager
             res.status(200).json({
                 success: true,
                 message: "Manager's request updated",
@@ -212,6 +220,7 @@ router.put('/signup-manager', async function (req, res) {
                 },
             });
         } else {
+            // response with main fields of manager
             res.status(200).json({
                 success: false,
                 message: "Manager's email is not confermed",
@@ -298,6 +307,7 @@ router.post('/signup-user', async function (req, res) {
             ),
         });
 
+        // send email
         await sendMail({
             to: result.email,
             subject: 'Conferma Email 🚀',
@@ -306,7 +316,7 @@ router.post('/signup-user', async function (req, res) {
             textEncoding: 'base64',
         });
 
-        // return Participant instance
+        // response with main fields of participant
         res.status(200).json({
             success: true,
             message: 'User correctly signed up',
@@ -377,21 +387,27 @@ router.post('/login', async function (req, res) {
         let user,
             type = 'Participant';
 
+        // if body contains username it has to be a participant
         if (req.body.username) {
+            // find the participant
             user = await Participant.findOne({
                 username: req.body.username,
             });
         } else {
+            // find the participant or the manager
             user = await Participant.findOne({ email: req.body.email });
             if (!user) {
                 user = await Manager.findOne({ email: req.body.email });
+                // change type to Manager
                 type = 'Manager';
             }
         }
+        // control if user is found
         if (!user)
             return res
                 .status(200)
                 .json({ success: false, message: 'User not found' });
+        // verify the password
         if (!(await user.verifyPassword(req.body.password)))
             return res
                 .status(200)
@@ -405,6 +421,7 @@ router.post('/login', async function (req, res) {
         const options = { expiresIn: 86400 }; // expires in 24 hours
         const token = jwt.sign(payload, process.env.JWT_SECRET, options);
 
+        // response with with the token
         res.status(200).json({
             success: true,
             message: 'Enjoy your token!',
@@ -443,6 +460,7 @@ router.post('/login', async function (req, res) {
  */
 router.get('/verify-email/:id', async function (req, res) {
     try {
+        // find and update the participant or the manager
         const user =
             (await Participant.findByIdAndUpdate(req.params.id, {
                 verifiedEmail: true,
@@ -451,8 +469,8 @@ router.get('/verify-email/:id', async function (req, res) {
                 verifiedEmail: true,
             }));
 
+        // control if the user is found
         if (user) {
-            // return Participant instance
             res.status(200).json({
                 success: true,
                 message: "User's email verified",
@@ -506,14 +524,16 @@ router.get('/verify-email/:id', async function (req, res) {
  */
 router.post('/google-auth', async function (req, res) {
     try {
+        // verify the token
         const googleUser = await verify(req.body.credential);
 
-        console.log(googleUser);
-
+        // constrol if token was valid
         if (googleUser === undefined) throw new Error('user not valid');
 
+        // find user in database
         let user = await Participant.findOne({ idExteralApi: googleUser.sub });
 
+        // if not user, create it
         if (!user) {
             user = await Participant.create({
                 username: 'roblor',
@@ -522,6 +542,7 @@ router.post('/google-auth', async function (req, res) {
             });
         }
 
+        // create token
         const payload = {
             email: user.email,
             id: user._id,
@@ -530,6 +551,7 @@ router.post('/google-auth', async function (req, res) {
         const options = { expiresIn: 86400 }; // expires in 24 hours
         const token = jwt.sign(payload, process.env.JWT_SECRET, options);
 
+        // return token
         res.status(200).json({
             success: true,
             message: 'Enjoy your token!',
