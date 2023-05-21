@@ -173,7 +173,7 @@ router.put('/signup-manager', async function (req, res) {
         const user = await Manager.findById(id);
 
         // throw an error if user not found
-        if (!user) throw new Error('User no found');
+        if (!user) throw new Error('User not found');
 
         // control if the email address is confermed
         if (user.verifiedEmail) {
@@ -543,7 +543,7 @@ router.post('/google-auth', async function (req, res) {
         // verify the token
         const googleUser = await verify(req.body.credential);
 
-        // constrol if token was valid
+        // controls if token was valid
         if (googleUser === undefined) throw new Error('user not valid');
 
         // find user in database
