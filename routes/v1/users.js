@@ -514,7 +514,10 @@ router.get('/verify-email/:id', async function (req, res) {
  *             properties:
  *               credential:
  *                 type: string
- *                 description: The username of the user.
+ *                 description: The google token.
+ *               username:
+ *                 type: string
+ *                 description: The username of the user (if it is the first time)
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -549,7 +552,7 @@ router.post('/google-auth', async function (req, res) {
         // if not user, create it
         if (!user) {
             user = await Participant.create({
-                username: 'roblor',
+                username: req.body.username,
                 email: googleUser.email,
                 idExteralApi: googleUser.sub,
             });
@@ -575,6 +578,7 @@ router.post('/google-auth', async function (req, res) {
     }
 });
 
+// Function thet create a random password
 const generatePassword = (
     length = 20,
     wishlist = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$'
@@ -584,28 +588,6 @@ const generatePassword = (
         .join('');
 
 module.exports = router;
-/** 
-const tokenChecker = function (req, res, next) {
-    // header or url parameters or post parameters
-    var token =
-        req.body.token || req.query.token || req.headers['x-access-token'];
-    if (!token)
-        res.status(401).json({ success: false, message: 'No token provided.' });
-    // decode token, verifies secret and checks expiration
-    jwt.verify(token, process.env.SUPER_SECRET, function (err, decoded) {
-        if (err)
-            res.status(403).json({
-                success: false,
-                message: 'Token not valid',
-            });
-        else {
-            // if everything is good, save in req object for use in other routes
-            req.loggedUser = decoded;
-            next();
-        }
-    });
-};
-*/
 
 /**
  * @swagger
