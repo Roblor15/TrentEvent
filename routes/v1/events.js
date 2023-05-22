@@ -274,6 +274,20 @@ router.post('/create-event', check('Manager'), async function (req, res) {
     }
 });
 
+/**
+ * @swagger
+ * /v1/users/subscribe-events:
+ *  post:
+ *      summary: A manager creates an event
+ *      description: A participant subscribes to an event
+ *      responses:
+ *          200:
+ *              description: Request succesfully processed.
+ *          400:
+ *              description: Malformed request.
+ *          501:
+ *              description: Internal server error.
+ */
 router.post(
     '/subscribe-event',
     check('Participants'),
