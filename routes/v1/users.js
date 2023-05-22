@@ -5,8 +5,8 @@ const crypto = require('crypto');
 
 const Manager = require('../../models/managers');
 const Participant = require('../../models/participant');
-const sendMail = require('../../notify');
-const { verify } = require('../../google-auth');
+const sendMail = require('../../lib/notify');
+const { verify } = require('../../lib/facebook-auth');
 
 const router = express.Router();
 
