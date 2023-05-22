@@ -1,9 +1,9 @@
 env:
     node: true
-    commonjs: true
+    commonjs: false
     es2021: true
 extends: eslint:recommended
 overrides: []
 parserOptions:
     ecmaVersion: latest
-rules: { no-var: 1, no-unused-vars: 'warn', 'prefer-const': 'warn' }
+rules: { no-var: 1, no-unused-vars: 'warn', prefer-const: 'warn' }
