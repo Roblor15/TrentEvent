@@ -1,8 +1,9 @@
 const express = require('express');
 
 const router = express.Router();
-const Events = require('../../models/events'); // yet to do
-
+const Event = require('../../models/events');
+const check = require('../../lib/authorization');
+const Manager = require('../../models/managers');
 /**
  * @swagger
  * /v1/events/:
@@ -241,20 +242,33 @@ const Events = require('../../models/events'); // yet to do
  *          501:
  *              description: Internal server error.
  */
-router.post('/create-event', async function (req, res) {
+router.post('/create-event', check('Manager'), async function (req, res) {
     try {
+        const { id } = req.user.id;
+        const manager = await Manager.findOneById(id);
         // create the event
-        const result = await Events.create({
+        const result = await Event.create({
             // requests all the attributes of the body
             ...req.body,
-            photos: req.files
-                .filter((p) => p.mimetype.startsWith('image'))
-                .map((p) => ({
-                    data: p.buffer,
-                    contentType: p.mimetype,
-                })),
+            address: manager.address,
+            photos: manager.photos,
         });
-        res.status(200).json(result);
+        res.status(200).json({
+            success: true,
+            event: {
+                date: result.date,
+                age_limit: result.age_limit,
+                event_cost: result.event_cost,
+                person_limit: result.person_limit,
+                event_description: result.event_description,
+                categories: result.categories,
+                event_manager: result.event_manager,
+            },
+            manager: {
+                address: result.address,
+                photos: result.photos,
+            },
+        });
     } catch (e) {
         res.status(501).send(e);
     }
@@ -262,7 +276,7 @@ router.post('/create-event', async function (req, res) {
 
 router.post('/subscribe-event', async function (req, res) {
     try {
-        const event = await Events.findOne(req.eventid);
+        const event = await Event.findOne(req.eventid);
         if (event.participant_list.lenght == event.person_limit)
             return res
                 .status(200)
