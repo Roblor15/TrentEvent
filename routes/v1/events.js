@@ -1,9 +1,11 @@
 const express = require('express');
 
 const router = express.Router();
-const Event = require('../../models/events');
+const Events = require('../../models/events'); // yet to do
 const check = require('../../lib/authorization');
+const Participant = require('../../models/participant');
 const Manager = require('../../models/managers');
+
 /**
  * @swagger
  * /v1/events/:
@@ -28,7 +30,6 @@ const Manager = require('../../models/managers');
  *                     properties:
  *                       year:
  *                         type: integer
- *                         maximum: 2023
  *                       month:
  *                         type: integer
  *                         minimum: 1
@@ -143,7 +144,6 @@ const Manager = require('../../models/managers');
  *                              properties:
  *                                  year:
  *                                      type: integer
- *                                      maximum: 2023
  *                                  month:
  *                                      type: integer
  *                                      minimum: 1
@@ -247,7 +247,7 @@ router.post('/create-event', check('Manager'), async function (req, res) {
         const { id } = req.user.id;
         const manager = await Manager.findOneById(id);
         // create the event
-        const result = await Event.create({
+        const result = await Events.create({
             // requests all the attributes of the body
             ...req.body,
             address: manager.address,
@@ -274,15 +274,43 @@ router.post('/create-event', check('Manager'), async function (req, res) {
     }
 });
 
-router.post('/subscribe-event', async function (req, res) {
-    try {
-        const event = await Event.findOne(req.eventid);
-        if (event.participant_list.lenght == event.person_limit)
-            return res
-                .status(200)
-                .json({ success: false, message: 'event is full' });
-        //if (event.cost != 0), indirizza al pagamento
-    } catch (e) {
-        res.status(501).send(e);
+router.post(
+    '/subscribe-event',
+    check('Participants'),
+    async function (req, res) {
+        try {
+            const { id } = req.user;
+            const user = await Participant.findOne(id);
+            const event = await Events.findOne(req.eventid);
+            // check if the participant is already subscribed
+            if (event.participant_list.find(({ p_id }) => p_id === id))
+                res.status(200).json({
+                    success: false,
+                    message: 'Participant already subscribed',
+                });
+            // check if the event is already full
+            if (event.participant_list.lenght == event.person_limit)
+                return res
+                    .status(200)
+                    .json({ success: false, message: 'event is full' });
+            // check if participant is old enough to participate to the event
+            if (
+                {
+                    $dateDiff: {
+                        startDate: user.birthDate,
+                        endDate: event.date,
+                        unit: 'year',
+                    },
+                } <= event.age_limit
+            )
+                res.status(200).json({
+                    success: false,
+                    message: 'too young to subscribe to this event',
+                });
+
+            //if (event.cost != 0), indirizza al pagamento
+        } catch (e) {
+            res.status(501).send(e);
+        }
     }
-});
+);
