@@ -309,7 +309,7 @@ router.post(
     async function (req, res) {
         try {
             const { address } = req.body;
-            const result = await Events.create({
+            const result = await Private_event.create({
                 // requests all the attributes of the body
                 ...req.body,
                 address: JSON.parse(address),
@@ -332,38 +332,6 @@ router.post(
         }
     }
 );
-
-router.post('/create-event', check('Manager'), async function (req, res) {
-    try {
-        const { id } = req.user.id;
-        const manager = await Manager.findOneById(id);
-        // create the event
-        const result = await Events.create({
-            // requests all the attributes of the body
-            ...req.body,
-            address: manager.address,
-            photos: manager.photos,
-        });
-        res.status(200).json({
-            success: true,
-            event: {
-                date: result.date,
-                age_limit: result.age_limit,
-                event_cost: result.event_cost,
-                person_limit: result.person_limit,
-                event_description: result.event_description,
-                categories: result.categories,
-                event_manager: result.event_manager,
-            },
-            manager: {
-                address: result.address,
-                photos: result.photos,
-            },
-        });
-    } catch (e) {
-        res.status(501).send(e);
-    }
-});
 
 /**
  * @swagger
