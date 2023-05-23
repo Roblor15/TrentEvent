@@ -44,7 +44,7 @@ const eventSchema = new Schema({
     },
     event_manager: {
         type: Schema.Types.ObjectId,
-        //ref: 'Manager'
+        ref: 'Manager',
     },
     participants_list: [
         {
@@ -53,7 +53,5 @@ const eventSchema = new Schema({
         },
     ],
 });
-
-eventSchema.plugin(bcrypt);
 
 module.exports = mongoose.model('Manager', eventSchema);

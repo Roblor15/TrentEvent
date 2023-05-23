@@ -36,7 +36,7 @@ const privateeventSchema = new Schema({
     },
     event_creator: {
         type: Schema.Types.ObjectId,
-        //ref: 'Participant'
+        ref: 'Participant',
     },
     participants_list: [
         {
@@ -45,7 +45,5 @@ const privateeventSchema = new Schema({
         },
     ],
 });
-
-privateeventSchema.plugin(bcrypt);
 
 module.exports = mongoose.model('Participant', privateeventSchema);
