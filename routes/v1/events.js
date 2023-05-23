@@ -5,6 +5,7 @@ const Events = require('../../models/events'); // yet to do
 const check = require('../../lib/authorization');
 const Participant = require('../../models/participant');
 const Manager = require('../../models/managers');
+const Private_event = require('../../models/private-event');
 
 /**
  * @swagger
@@ -242,6 +243,96 @@ const Manager = require('../../models/managers');
  *          501:
  *              description: Internal server error.
  */
+router.post('/create-event', check('Manager'), async function (req, res) {
+    try {
+        const { id } = req.user.id;
+        const manager = await Manager.findOneById(id);
+        // create the event
+        const result = await Events.create({
+            // requests all the attributes of the body
+            ...req.body,
+            address: manager.address,
+            photos: manager.photos,
+        });
+        res.status(200).json({
+            success: true,
+            event: {
+                date: result.date,
+                age_limit: result.age_limit,
+                event_cost: result.event_cost,
+                person_limit: result.person_limit,
+                event_description: result.event_description,
+                categories: result.categories,
+                event_manager: result.event_manager,
+            },
+            manager: {
+                address: result.address,
+                photos: result.photos,
+            },
+        });
+    } catch (e) {
+        res.status(501).send(e);
+    }
+});
+
+/**
+ * @swagger
+ * /v1/users/create-private-event:
+ *  post:
+ *      description: A participant creates an event
+ *      requestBody:
+ *          required: true
+ *          content:
+ *            multipart/form-data:
+ *                schema:
+ *                  allOf:
+ *                    - $ref: '#/components/schemas/Private_event'
+ *                    - type: object
+ *                      properties:
+ *                        photos:
+ *                          type: array
+ *                          description: Photos of the local.
+ *                          items:
+ *                            type: string
+ *                            format: binary
+ *      responses:
+ *          200:
+ *              description: Request succesfully processed.
+ *          400:
+ *              description: Malformed request.
+ *          501:
+ *              description: Internal server error.
+ */
+router.post(
+    '/create-private-event',
+    check('Participant'),
+    async function (req, res) {
+        try {
+            const { address } = req.body;
+            const result = await Events.create({
+                // requests all the attributes of the body
+                ...req.body,
+                address: JSON.parse(address),
+                photos: req.files
+                    // filter images
+                    .filter((p) => p.mimetype.startsWith('image'))
+                    .map((p) => ({
+                        data: p.buffer,
+                        contentType: p.mimetype,
+                    })),
+            });
+            res.status(200).json({
+                date: result.date,
+                address: result.address,
+                cost: result.event_cost,
+                description: result.event_description,
+            });
+        } catch (e) {
+            res.status(501).send(e);
+        }
+    }
+);
+
 router.post('/create-event', check('Manager'), async function (req, res) {
     try {
         const { id } = req.user.id;
