@@ -1,10 +1,10 @@
 const express = require('express');
 
 const router = express.Router();
-const Events = require('../../models/events'); // yet to do
+const Event = require('../../models/event'); 
 const check = require('../../lib/authorization');
 const Participant = require('../../models/participant');
-const Manager = require('../../models/managers');
+const Manager = require('../../models/manager');
 const Private_event = require('../../models/private-event');
 
 /**
@@ -248,7 +248,7 @@ router.post('/create-event', check('Manager'), async function (req, res) {
         const { id } = req.user.id;
         const manager = await Manager.findOneById(id);
         // create the event
-        const result = await Events.create({
+        const result = await Event.create({
             // requests all the attributes of the body
             ...req.body,
             address: manager.address,
@@ -349,12 +349,12 @@ router.post(
  */
 router.post(
     '/subscribe-event',
-    check('Participants'),
+    check('Participant'),
     async function (req, res) {
         try {
             const { id } = req.user;
             const user = await Participant.findOne(id);
-            const event = await Events.findOne(req.eventid);
+            const event = await Event.findOne(req.eventid);
             // check if the participant is already subscribed
             if (event.participant_list.find(({ p_id }) => p_id === id))
                 res.status(200).json({
@@ -387,3 +387,57 @@ router.post(
         }
     }
 );
+
+/**
+ * @swagger
+ * /v1/event/private-area/          ////////"{ticketId}":
+ *   get:
+ *     description: checking your subscriptions.
+ *     parameters:
+ *       - in: path
+ *         name:                 ticketId
+ *         schema:
+ *           type: object
+ *         required: true
+ *         description: QRcode of the ticket
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+
+router.get('/private-area/:id', check ('Ticket'), async function (req, res) {
+    try {
+        const event = await Event.findOne(req.body);
+        const participant = await Participant.findOneById(req.params.id);
+        const result = await Ticket.findOne(req.body);
+
+        if (event.participant_list.includes(participant.id)) {
+            if (Ticket.eventid == Event.eventid){
+            res.status(200).json({
+                success: true,
+                eventid: result.eventid,
+                date: result.date,
+                ticketid: result.ticketid,
+            });
+        
+        } else {
+            res.status(200).json({
+                success: false,
+            });
+        }
+    }
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
