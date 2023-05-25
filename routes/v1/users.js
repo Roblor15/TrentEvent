@@ -3,7 +3,7 @@ const multer = require('multer');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
-const Manager = require('../../models/managers');
+const Manager = require('../../models/manager');
 const Participant = require('../../models/participant');
 const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');

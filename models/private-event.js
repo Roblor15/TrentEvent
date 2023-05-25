@@ -46,4 +46,4 @@ const privateeventSchema = new Schema({
     ],
 });
 
-module.exports = mongoose.model('Participant', privateeventSchema);
+module.exports = mongoose.model('PrivateEvent', privateeventSchema);

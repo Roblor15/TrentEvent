@@ -353,8 +353,8 @@ router.post(
     async function (req, res) {
         try {
             const { id } = req.user;
-            const user = await Participant.findOne(id);
-            const event = await Event.findOne(req.eventid);
+            const user = await Participant.findOneById(id);
+            const event = await Event.findOneById(req.eventid);
             // check if the participant is already subscribed
             if (event.participant_list.find(({ p_id }) => p_id === id))
                 res.status(200).json({
@@ -370,7 +370,7 @@ router.post(
             if (
                 {
                     $dateDiff: {
-                        startDate: user.birthDate,
+                        startDate: user.birthDate,      // da rivedere
                         endDate: event.date,
                         unit: 'year',
                     },
@@ -415,14 +415,14 @@ router.post(
  *               $ref: '#/components/schemas/Response'
  */
 
-router.get('/private-area/:id', check ('Ticket'), async function (req, res) {
+router.get('/private-area/', check ('Participant'), async function (req, res) {
     try {
-        const event = await Event.findOne(req.body);
-        const participant = await Participant.findOneById(req.params.id);
+        const participant = await Participant.findOneById(req.user.id);
+        const events 
         const result = await Ticket.findOne(req.body);
 
         if (event.participant_list.includes(participant.id)) {
-            if (Ticket.eventid == Event.eventid){
+            if (Ticket.eventid == event.eventid){
             res.status(200).json({
                 success: true,
                 eventid: result.eventid,

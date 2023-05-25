@@ -41,6 +41,12 @@ const participantSchema = new Schema({
         type: Date,
         required: [true, 'Date of birth not provided'],
     },
+    event_list: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'Event',
+        },
+    ],
 });
 
 participantSchema.pre('validate', function (next) {
