@@ -1,30 +1,31 @@
 const mongoose = require('mongoose');
-const bcrypt = require('mongoose-bcrypt');
+
 const { Schema } = mongoose;
 
-// decidere se separare le foto
+// TODO: decidere se separare le foto
 const eventSchema = new Schema({
-    eventid: {
-        type: Number,
-        required: true,
-    },
-    date: {
+    initDate: {
         type: Date,
         required: true,
-        min: Date(),
     },
-    age_limit: {
+    endDate: {
+        type: Date,
+        required: true,
+    },
+    name: String,
+    ageLimit: {
         type: Number,
+        default: 0,
         min: 0,
     },
-    event_cost: {
+    price: {
         type: Number,
-        required: true,
+        default: 0,
         min: 0,
     },
-    person_limit: {
+    limitPeople: {
         type: Number,
-        required: true,
+        default: 0,
         min: 0,
     },
     photos: [
@@ -33,20 +34,21 @@ const eventSchema = new Schema({
             contentType: String,
         },
     ],
-    event_description: {
+    description: {
         type: String,
-        maxLength: 100,
+        maxLength: 300,
     },
     categories: {
         type: String,
         enum: ['musica', 'discoteca', `all'aperto`, 'al chiuso'],
         required: true,
     },
-    event_manager: {
+    manager: {
         type: Schema.Types.ObjectId,
+        require: true,
         ref: 'Manager',
     },
-    participants_list: [
+    participantsList: [
         {
             type: Schema.Types.ObjectId,
             ref: 'Participant',
@@ -54,4 +56,11 @@ const eventSchema = new Schema({
     ],
 });
 
-module.exports = mongoose.model('Manager', eventSchema);
+eventSchema.pre('validate', function (next) {
+    if (this.date > new Date()) {
+        next();
+    }
+    next(new Error('The date is old'));
+});
+
+module.exports = mongoose.model('Event', eventSchema);

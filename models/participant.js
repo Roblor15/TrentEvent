@@ -56,6 +56,7 @@ participantSchema.pre('validate', function (next) {
         next();
     }
 });
+
 participantSchema.plugin(bcrypt);
 
 module.exports = mongoose.model('Participant', participantSchema);
