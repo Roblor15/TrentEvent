@@ -269,3 +269,90 @@ router.get('/private-area/', check('Participant'), async function (req, res) {
 });
 
 module.exports = router;
+
+/**
+ * @swagger
+ * /v1/users/modify-events:
+ *   put:
+ *     description: Modify your events
+ *     tags:
+ *       - manager
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ["date", "initDate", "endDate", "limitPeople", "image", "description", "categories"]
+ *              
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     manager:
+ *                       $ref: '#/components/schemas/Manager'
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.put(
+    '/modify-event',
+    check ( 'Manager'),
+    async function (req, res) {
+        try {
+            let event = req.body;
+            Event.findOne({ eventid : eventid}, function (error, event){
+                if ( error || !event ) {
+                    return res
+                        .status(200)
+                        .json({ success: false, message: 'Event is full' });
+                } else {
+                    event.initDate = req.body.initDate;
+                    event.endDate = req.body.endDate;
+                    event.date = req.body.date;
+                    event.limitPeople = req.body.limitPeople;
+                    event.image = req.body.image;
+                    event.description = req.body.description;
+                    event.categories = req.body.categories;
+
+                    event.update(function (err, event){
+                        if (err) {
+                            return res
+                                .status(200)
+                                .json({ success: false, message: 'Event is full' });
+                        }
+                        res.redirect('../../models/event')
+                    });
+                }
+            });
+
+            
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
+        }
+    }
+);
