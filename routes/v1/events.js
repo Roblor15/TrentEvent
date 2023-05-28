@@ -5,9 +5,10 @@ const router = express.Router();
 const Event = require('../../models/event');
 const Participant = require('../../models/participant');
 const Manager = require('../../models/manager');
-const PrivateEvent = require('../../models/private-event');
 
 const check = require('../../lib/authorization');
+const checkProperties = require('../../lib/check-properties');
+const { diffInYears } = require('../../lib/general');
 
 /**
  * @swagger
@@ -115,111 +116,36 @@ router.get('/', async function (req, res) {});
  *            schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/', check('Manager'), async function (req, res) {
-    try {
-        const { id } = req.user.id;
-        const manager = await Manager.findById(id);
-        // create the event
-        const result = await Event.create({
-            // requests all the attributes of the body
-            ...req.body,
-            address: manager.address,
-            photos: manager.photos,
-        });
-        res.status(200).json({
-            success: true,
-            event: {
-                date: result.date,
-                age_limit: result.age_limit,
-                event_cost: result.event_cost,
-                person_limit: result.person_limit,
-                event_description: result.event_description,
-                categories: result.categories,
-                event_manager: result.event_manager,
-            },
-            manager: {
-                address: result.address,
-                photos: result.photos,
-            },
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-    }
-});
-
-/**
- * @swagger
- * /v1/users/create-private-event:
- *   post:
- *     description: A participant creates an event
- *     requestBody:
- *     required: true
- *     security:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- *     content:
- *       multipart/form-data:
- *         schema:
- *           allOf:
- *             - $ref: '#/components/schemas/PrivateEvent'
- *             - type: object
- *               properties:
- *                 photos:
- *                   type: array
- *                   description: Photos of the local.
- *                   items:
- *                     type: string
- *                     format: binary
- *     responses:
- *       200:
- *         description: Request succesfully processed.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
- *       400:
- *         description: Malformed request.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
- *       401:
- *         description: Not Authorized.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
- *       501:
- *         description: Internal server error.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
- */
 router.post(
-    '/create-private-event',
-    check('Participant'),
+    '/',
+    check('Manager'),
+    checkProperties(['initDate', 'endDate', 'name', 'description']),
     async function (req, res) {
         try {
-            const { address } = req.body;
-            const result = await PrivateEvent.create({
+            const { id } = req.user.id;
+            const manager = await Manager.findById(id);
+            // create the event
+            const result = await Event.create({
                 // requests all the attributes of the body
                 ...req.body,
-                address: JSON.parse(address),
-                photos: req.files
-                    // filter images
-                    .filter((p) => p.mimetype.startsWith('image'))
-                    .map((p) => ({
-                        data: p.buffer,
-                        contentType: p.mimetype,
-                    })),
+                address: manager.address,
+                photos: manager.photos,
             });
             res.status(200).json({
-                date: result.date,
-                address: result.address,
-                cost: result.event_cost,
-                description: result.event_description,
+                success: true,
+                event: {
+                    date: result.date,
+                    age_limit: result.age_limit,
+                    event_cost: result.event_cost,
+                    person_limit: result.person_limit,
+                    event_description: result.event_description,
+                    categories: result.categories,
+                    event_manager: result.event_manager,
+                },
+                manager: {
+                    address: result.address,
+                    photos: result.photos,
+                },
             });
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
@@ -339,41 +265,7 @@ router.post('/subscribe/:id', check('Participant'), async function (req, res) {
  *               $ref: '#/components/schemas/Response'
  */
 router.get('/private-area/', check('Participant'), async function (req, res) {
-    try {
-        const participant = await Participant.findOneById(req.user.id);
-        const events 
-        const result = await Ticket.findOne(req.body);
-
-        if (event.participant_list.includes(participant.id)) {
-            if (Ticket.eventid == event.eventid){
-            res.status(200).json({
-                success: true,
-                eventid: result.eventid,
-                date: result.date,
-                ticketid: result.ticketid,
-            });
-        
-        } else {
-            res.status(200).json({
-                success: false,
-            });
-        }
-    }
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-    }
+    console.log('ciao');
 });
 
-function diffInYears(a, b) {
-    const now = new Date();
-
-    const years = now.getUTCFullYear() - b.getUTCFullYear();
-    const months = now.getUTCMonth() - b.getUTCMonth();
-    const days = now.getUTCDate() - b.getUTCDate();
-
-    if (months >= 0 && days >= 0) {
-        return years;
-    } else {
-        return years - 1;
-    }
-}
+module.exports = router;

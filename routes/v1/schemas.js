@@ -85,7 +85,7 @@
  *           example: Bar
  *     Event:
  *       type: object
- *       required: ["initDate", "endDate"]
+ *       required: ["initDate", "endDate", "name", "description"]
  *       properties:
  *         initDate:
  *           type: string

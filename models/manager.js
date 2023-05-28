@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('mongoose-bcrypt');
+const { isEmail } = require('../lib/general');
+
 const { Schema } = mongoose;
 
 // decidere se separare le foto
@@ -14,7 +16,7 @@ const managerSchema = new Schema({
         index: true,
         unique: true,
         validate: {
-            validator: (v) => /[a-z0-9]+@[a-z]+\.[a-z]{2,3}/.test(v),
+            validator: isEmail,
             message: (props) => `${props.value} is not a valid email!`,
         },
     },
