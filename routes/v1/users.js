@@ -8,6 +8,7 @@ const Participant = require('../../models/participant');
 const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
 const checkProperties = require('../../lib/check-properties');
+const check = require('../../lib/authorization');
 
 const router = express.Router();
 
@@ -638,7 +639,7 @@ router.post(
     }
 );
 
-// Function thet create a random password
+// Function that create a random password
 const generatePassword = (
     length = 20,
     wishlist = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$'
@@ -646,5 +647,74 @@ const generatePassword = (
     Array.from(crypto.randomFillSync(new Uint32Array(length)))
         .map((x) => wishlist[x % wishlist.length])
         .join('');
+
+/**
+ * @swagger
+ * /v1/users/password:
+ *   put:
+ *     description: Change the password of the account.
+ *     tags:
+ *       - users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ["password"]
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 description: The google token.
+ *
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *        401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.put(
+    '/password',
+    check('Participant'),
+    checkProperties(['password']),
+    async function (req, res) {
+        try {
+            // find user in database
+            const user = await Participant.findById(req.user.id);
+            user.password = req.body.password;
+
+            //save the user updates
+            await user.save();
+
+            res.status(200).json({
+                success: true,
+                message: 'Password changed',
+            });
+        } catch (e) {
+            res.status(501).send(e.toString());
+        }
+    }
+);
 
 module.exports = router;

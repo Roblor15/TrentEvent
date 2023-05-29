@@ -48,12 +48,7 @@ const { diffInYears } = require('../../lib/general');
  *                                 items:
  *                                   type: string
  *                                   format: binary
- *       400:
- *         description: Malformed request.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
+ *
  *       501:
  *         description: Internal server error.
  *         content:
@@ -61,7 +56,18 @@ const { diffInYears } = require('../../lib/general');
  *            schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.get('/', async function (req, res) {});
+router.get('/', async function (req, res) {
+    try {
+        const events = await Event.find().where('initDate').gt(new Date());
+        res.status(200).json({
+            success: true,
+            message: 'Here is the list of events:',
+            events,
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
 
 /**
  * @swagger
