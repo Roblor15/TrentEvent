@@ -8,7 +8,7 @@ const Event = require('../../models/event');
 const Participant = require('../../models/participant');
 const Manager = require('../../models/manager');
 
-const check = require('../../lib/authorization');
+const { check } = require('../../lib/authorization');
 const checkProperties = require('../../lib/check-properties');
 const { diffInYears } = require('../../lib/general');
 

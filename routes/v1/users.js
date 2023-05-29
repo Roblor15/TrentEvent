@@ -675,14 +675,13 @@ const generatePassword = (
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Response'
- *
  *       400:
  *         description: Malformed request.
  *         content:
  *           application/json:
  *            schema:
  *               $ref: '#/components/schemas/Response'
- *        401:
+ *       401:
  *         description: Not Authorized.
  *         content:
  *           application/json:
