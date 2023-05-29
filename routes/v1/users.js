@@ -8,7 +8,7 @@ const Participant = require('../../models/participant');
 const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
 const checkProperties = require('../../lib/check-properties');
-const check = require('../../lib/authorization');
+const { check } = require('../../lib/authorization');
 
 const router = express.Router();
 
@@ -38,6 +38,7 @@ const upload = multer({ storage: multer.memoryStorage() });
  *                     items:
  *                       type: string
  *                       format: binary
+ *
  *     responses:
  *       200:
  *         description: Request succesfully processed.

@@ -1,3 +1,5 @@
+// TODO: cosa restiturire dalle api
+
 const express = require('express');
 
 const router = express.Router();
@@ -84,18 +86,9 @@ router.get('/', async function (req, res) {
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
- *             allOf:
- *               - $ref: '#/components/schemas/Event'
- *               - type: object
- *                 properties:
- *                   photos:
- *                     type: array
- *                     description: Photos of the event
- *                     items:
- *                       type: string
- *                       format: binary
+ *             $ref: '#/components/schemas/Event'
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -135,7 +128,7 @@ router.post(
                 // requests all the attributes of the body
                 ...req.body,
                 address: manager.address,
-                photos: manager.photos,
+                photos: manager.photos.map((p) => p._id),
             });
             res.status(200).json({
                 success: true,
@@ -162,7 +155,7 @@ router.post(
 // TODO: pensare se PUT
 /**
  * @swagger
- * /v1/events/subscribe/{id}:
+ * /v1/events/{id}/subscribe:
  *   post:
  *     summary: A manager creates an event
  *     description: A participant subscribes to an event
@@ -200,7 +193,7 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/subscribe/:id', check('Participant'), async function (req, res) {
+router.post('/:id/subscribe', check('Participant'), async function (req, res) {
     try {
         const { id } = req.user;
         const user = await Participant.findById(id);
@@ -227,6 +220,7 @@ router.post('/subscribe/:id', check('Participant'), async function (req, res) {
             });
 
         // TODO: if (event.cost != 0), indirizza al pagamento
+        // TODO: cambiare save in update
 
         // subscribe user to event
         event.participantsList.push(id);

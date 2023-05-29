@@ -41,12 +41,10 @@ const managerSchema = new Schema({
         _id: false,
     },
     localType: { type: String, enum: ['Bar', 'Discoteca'], required: [true] },
-    photos: [
-        {
-            data: Buffer,
-            contentType: String,
-        },
-    ],
+    photos: {
+        type: [Schema.Types.ObjectId],
+        ref: 'Manager.photos',
+    },
     approvation: {
         type: {
             approved: { type: Boolean, default: false },

@@ -1,5 +1,6 @@
 env:
     node: true
+    jest: true
     commonjs: false
     es2021: true
 extends: eslint:recommended

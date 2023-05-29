@@ -14,7 +14,7 @@ router.get('/', check('Participant'), async function (req, res) {
 
         const myEvents = await PrivateEvent.find({ creator: id });
         const events = await PrivateEvent.find({
-            participantsList: { $all: [id] },
+            participantsList: { $all: [{ user: id }] },
         });
 
         res.status(200).json({ myEvents, events });
