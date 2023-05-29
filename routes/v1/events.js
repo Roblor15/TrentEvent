@@ -5,6 +5,7 @@ const router = express.Router();
 const Event = require('../../models/event');
 const Participant = require('../../models/participant');
 const Manager = require('../../models/manager');
+const Ticket = require('../../models/ticket');
 
 const check = require('../../lib/authorization');
 const checkProperties = require('../../lib/check-properties');
@@ -264,8 +265,21 @@ router.post('/subscribe/:id', check('Participant'), async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.get('/private-area/', check('Participant'), async function (req, res) {
-    console.log('ciao');
+router.get('/subscribed', check('Participant'), async function (req, res) {
+    try {
+        const { id } = req.user;
+
+        const events = await Event.find({
+            participantsList: { $all: [id] },
+        });
+        return res.status(200).json({
+            success: true,
+            message: 'Here are your events',
+            events,
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
 });
 
 module.exports = router;
@@ -276,7 +290,7 @@ module.exports = router;
  *   put:
  *     description: Modify your events
  *     tags:
- *       - manager
+ *       - Event
  *     security:
  *       type: http
  *       scheme: bearer
@@ -287,7 +301,7 @@ module.exports = router;
  *           schema:
  *             type: object
  *             required: ["date", "initDate", "endDate", "limitPeople", "image", "description", "categories"]
- *              
+ *
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -319,40 +333,32 @@ module.exports = router;
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.put(
-    '/modify-event',
-    check ( 'Manager'),
-    async function (req, res) {
-        try {
-            let event = req.body;
-            Event.findOne({ eventid : eventid}, function (error, event){
-                if ( error || !event ) {
-                    return res
-                        .status(200)
-                        .json({ success: false, message: 'Event is full' });
-                } else {
-                    event.initDate = req.body.initDate;
-                    event.endDate = req.body.endDate;
-                    event.date = req.body.date;
-                    event.limitPeople = req.body.limitPeople;
-                    event.image = req.body.image;
-                    event.description = req.body.description;
-                    event.categories = req.body.categories;
+router.put('/:id/modify-event', check('Manager'), async function (req, res) {
+    try {
+        const event = await Event.findById(req.params.id);
 
-                    event.update(function (err, event){
-                        if (err) {
-                            return res
-                                .status(200)
-                                .json({ success: false, message: 'Event is full' });
-                        }
-                        res.redirect('../../models/event')
-                    });
-                }
+        if (event) {
+            event.initDate = req.body.initDate;
+            event.endDate = req.body.endDate;
+            event.date = req.body.date;
+            event.limitPeople = req.body.limitPeople;
+            // event.image = req.body.image; TODO
+            event.description = req.body.description;
+            event.categories = req.body.categories;
+
+            await event.update();
+
+            return res.status(200).json({
+                success: true,
+                message: 'Your changes have been saved',
             });
-
-            
-        } catch (e) {
-            res.status(501).json({ success: false, message: e.toString() });
+        } else {
+            return res.status(200).json({
+                success: false,
+                message: "The event doesn't exist",
+            });
         }
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
     }
-);
+});
