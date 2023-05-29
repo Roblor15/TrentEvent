@@ -6,15 +6,20 @@ const request = require('supertest');
 const base = '/v1/users/';
 
 describe('POST ' + base + 'signup-manager', () => {
+    let db;
+
     beforeAll(async () => {
-        jest.setTimeout(8000);
-        app.locals.db = await mongoose.connect(process.env.DB_URL);
+        jest.setTimeout(10000);
+        db = await mongoose.connect(process.env.MONGODB_URL);
     });
-    afterAll(() => {
-        mongoose.connection.close(true);
+    afterAll(async () => {
+        await db?.disconnect();
     });
 
-    // test('POST ' + base + 'signup-manager', () => {
-    //     return request(app).post(base);
-    // });
+    test('POST ' + base + 'signup-manager', () => {
+        return request(app)
+            .post(base + 'signup-manager')
+            .send({})
+            .expect(400);
+    });
 });

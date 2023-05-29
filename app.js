@@ -27,11 +27,6 @@ const swaggerOptionsV1 = {
 // create s swagger document from the JsDocs
 const swaggerDocument = swaggerJsDoc(swaggerOptionsV1);
 
-// connect to database
-mongoose
-    .connect(process.env.MONGODB_URL)
-    .then(() => console.log('Connected to mongodb'));
-
 // create express app
 const app = express();
 

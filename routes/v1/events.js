@@ -199,8 +199,8 @@ router.post('/:id/subscribe', check('Participant'), async function (req, res) {
         const user = await Participant.findById(id);
         const event = await Event.findById(req.params.id);
         // check if the participant is already subscribed
-        if (event.participantsList.find(({ _id }) => _id === id))
-            res.status(200).json({
+        if (event.participantsList.find((_id) => _id === id))
+            return res.status(200).json({
                 success: false,
                 message: 'Participant already subscribed',
             });
@@ -214,7 +214,7 @@ router.post('/:id/subscribe', check('Participant'), async function (req, res) {
                 .json({ success: false, message: 'Event is full' });
         // check if participant is old enough to participate to the event
         if (diffInYears(event.initDate, user.birthDate) < event.ageLimit)
-            res.status(200).json({
+            return res.status(200).json({
                 success: false,
                 message: 'Too young to subscribe to this event',
             });
@@ -226,7 +226,7 @@ router.post('/:id/subscribe', check('Participant'), async function (req, res) {
         event.participantsList.push(id);
         await event.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: 'You are succesfully subscribed to this event',
         });
