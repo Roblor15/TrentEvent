@@ -5,7 +5,6 @@ const router = express.Router();
 const Event = require('../../models/event');
 const Participant = require('../../models/participant');
 const Manager = require('../../models/manager');
-const Ticket = require('../../models/ticket');
 
 const check = require('../../lib/authorization');
 const checkProperties = require('../../lib/check-properties');
@@ -356,6 +355,71 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
             return res.status(200).json({
                 success: false,
                 message: "The event doesn't exist",
+            });
+        }
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
+/**
+ * @swagger
+ * /v1/users/delete-events:
+ *   delete:
+ *     description: Delete your events
+ *     tags:
+ *       - Event
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *                $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.delete('/:id', check('Manager'), async function (req, res) {
+    try {
+        const event = await Event.findById(req.params.id);
+        if (!event) {
+            return res.status(200).json({
+                success: false,
+                message: "The event doesn't exist",
+            });
+        }
+        if (event.creator === req.user.id) {
+            await Event.deleteOne({
+                _id: req.params.id,
+            });
+            return res.status(200).json({
+                success: true,
+                message: 'Your has been cancelled',
+            });
+        } else {
+            return res.status(200).json({
+                success: false,
+                message: "you can't delete this event",
             });
         }
     } catch (e) {
