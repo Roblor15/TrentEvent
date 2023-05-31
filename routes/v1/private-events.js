@@ -99,17 +99,7 @@ router.get('/:id', check('Participant'), async function (req, res) {
  */
 router.post('/', check('Participant'), async function (req, res) {
     try {
-        const { address, initDate, endDate } = req.body;
-        if (initDate < endDate)
-            res.status(200).json({
-                success: false,
-                message: 'initDate bigger than endDate',
-            });
-        if (initDate < new Date())
-            res.status(200).json({
-                success: false,
-                message: 'initDate start date of the event is old',
-            });
+        const { address } = req.body;
         const result = await PrivateEvent.create({
             // requests all the attributes of the body
             ...req.body,
@@ -122,6 +112,16 @@ router.post('/', check('Participant'), async function (req, res) {
                     contentType: p.mimetype,
                 })),
         });
+        if (result.initDate < result.endDate)
+            res.status(200).json({
+                success: false,
+                message: 'initDate bigger than endDate',
+            });
+        if (result.initDate < new Date())
+            res.status(200).json({
+                success: false,
+                message: 'initDate start date of the event is old',
+            });
         res.status(200).json({
             initDate: result.initDate,
             endDate: result.endDate,
