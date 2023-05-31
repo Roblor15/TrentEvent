@@ -212,6 +212,7 @@ router.post('/:id/subscribe', check('Participant'), async function (req, res) {
             return res
                 .status(200)
                 .json({ success: false, message: 'Event is full' });
+
         // check if participant is old enough to participate to the event
         if (diffInYears(event.initDate, user.birthDate) < event.ageLimit)
             return res.status(200).json({

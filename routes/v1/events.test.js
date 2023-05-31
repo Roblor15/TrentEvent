@@ -25,7 +25,7 @@ describe('POST /v1/events/{id}/subscribe', () => {
                     participantsList: [250, 251],
                     limitPeople: 500,
                     save: async () => {},
-                    initDate: new Date(2022, 11, 1),
+                    initDate: new Date(2023, 11, 1),
                     ageLimit: 18,
                 };
             else
@@ -34,7 +34,7 @@ describe('POST /v1/events/{id}/subscribe', () => {
                     participantsList: [250, 251, 2010],
                     limitPeople: 3,
                     save: async () => {},
-                    initDate: new Date(2022, 11, 1),
+                    initDate: new Date(2023, 11, 1),
                 };
         });
 
@@ -43,7 +43,7 @@ describe('POST /v1/events/{id}/subscribe', () => {
         participantSpy = jest
             .spyOn(Participant, 'findById')
             .mockImplementation((id) => {
-                if (id === '3000')
+                if (id === 3000)
                     return {
                         _id: id,
                         birthDate: new Date(2008, 5, 22),
@@ -108,12 +108,12 @@ describe('POST /v1/events/{id}/subscribe', () => {
             });
     });
     const validToken3 = jwt.sign(
-        { id: 3030, type: 'Participant' }, // id partecipante
+        { id: 3000, type: 'Participant' }, // id partecipante
         process.env.JWT_SECRET,
         { expiresIn: 86400 }
     );
 
-    test('POST /v1/events/{id}/subscribe to an event with an age limit', () => {
+    test('POST /v1/events/3030/subscribe to an event with an age limit', () => {
         return request(app)
             .post('/v1/events/3030/subscribe')
             .auth(validToken3, { type: 'bearer' })
@@ -155,3 +155,64 @@ describe('POST /v1/events/{id}/subscribe', () => {
 });
 // TODO expect(res.body.success).toBe(false);
 // expect(res.body.message).toBe('');.
+
+describe('POST /v1/events', () => {
+    let managerSpy;
+    let eventSpy;
+
+    beforeAll(() => {
+        const Manager = require('../../models/manager');
+        const Event = require('../../models/event');
+
+        managerSpy = jest
+            .spyOn(Manager, 'findById')
+            .mockImplementation((id) => {
+                if (id === 1010)
+                    return {
+                        address: {
+                            country: 'Italy',
+                            city: 'Trento',
+                            street: 'via Roma',
+                            number: '7',
+                            cap: '38123',
+                        },
+                        photos: [{ _id: '09' }, { _id: '088098' }],
+                    };
+            });
+
+        eventSpy = jest
+            .spyOn(Event, 'create')
+            .mockImplementation((body) => body);
+    });
+
+    afterAll(() => {
+        managerSpy.mockRestore();
+        eventSpy.mockRestore();
+    });
+    const validToken = jwt.sign(
+        { id: 1010, type: 'Manager' },
+        process.env.JWT_SECRET,
+        { expiresIn: 86400 }
+    );
+    test('POST /v1/events created', () => {
+        return request(app)
+            .post('/v1/events')
+            .auth(validToken, { type: 'bearer' })
+            .send({
+                date: new Date(2023, 11, 2),
+                event_description: 'Bar di Trento',
+                address: {
+                    country: 'Italy',
+                    city: 'Trento',
+                    street: 'via Roma',
+                    number: '7',
+                    cap: '38123',
+                },
+                photos: [{ _id: '09' }, { _id: '088098' }],
+            })
+            .expect(200) // expected 200 "OK", got 400 "Bad Request"
+            .expect(function (res) {
+                expect(res.body.success).toBe(true);
+            });
+    });
+});
