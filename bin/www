@@ -27,7 +27,7 @@ const server = http.createServer(app);
  */
 
 // connect to database
-mongoose.connect(process.env.MONGODB_URL).then(() => {
+mongoose.connect(process.env.MONGODB_URL, { dbName: 'production' }).then(() => {
     console.log('Connected to mongodb');
     server.listen(port);
     server.on('error', onError);

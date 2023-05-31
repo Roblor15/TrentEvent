@@ -38,7 +38,9 @@ const upload = multer({ storage: multer.memoryStorage() });
  *                     items:
  *                       type: string
  *                       format: binary
- *
+ *                   email:
+ *                     type: boolean
+ *                     description: Decide if the system sends an email for conferming it
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -101,14 +103,16 @@ router.post(
             });
 
             // send email with the link to conferm the email address
-            await sendMail({
-                to: result.email,
-                subject: 'Conferma Email 🚀',
-                html: `<p>Ciao ${result.localName},</p>
+            if (req.body.email) {
+                await sendMail({
+                    to: result.email,
+                    subject: 'Conferma Email 🚀',
+                    html: `<p>Ciao ${result.localName},</p>
                    <p>Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a>.<br/>
                     Verrai ricontattato con la rispsta di un supervisore.</p>`,
-                textEncoding: 'base64',
-            });
+                    textEncoding: 'base64',
+                });
+            }
 
             // response with main fields of manager
             res.status(200).json({
@@ -153,6 +157,9 @@ router.post(
  *               approved:
  *                 type: boolean
  *                 description: If the request is approved or not.
+ *               sendEmail:
+ *                 type: boolean
+ *                 description: Decide if send
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -223,13 +230,15 @@ router.put(
                         <p>La tua richiesta per diventare Organizzatore di eventi è stata rifiutata.</p>`;
                 }
 
-                // send the email
-                await sendMail({
-                    to: user.email,
-                    subject: 'Richiesta Organizzatore di eventi',
-                    html,
-                    textEncoding: 'base64',
-                });
+                if (req.body.email) {
+                    // send the email
+                    await sendMail({
+                        to: user.email,
+                        subject: 'Richiesta Organizzatore di eventi',
+                        html,
+                        textEncoding: 'base64',
+                    });
+                }
 
                 // response with main fields of manager
                 res.status(200).json({
