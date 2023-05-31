@@ -207,7 +207,7 @@ router.post('/:id/subscribe', check('Participant'), async function (req, res) {
         // check if the event is already full
         if (
             event.limitPeople > 0 &&
-            event.participantsList.lenght === event.limitPeople
+            event.participantsList.length === event.limitPeople
         )
             return res
                 .status(200)

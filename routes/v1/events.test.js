@@ -2,7 +2,6 @@ const app = require('../../app');
 
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
-const assert = require('assert');
 
 describe('POST /v1/events/{id}/subscribe', () => {
     let eventSpy; // Moking Event.find method
@@ -20,6 +19,15 @@ describe('POST /v1/events/{id}/subscribe', () => {
                     save: async () => {},
                     initDate: new Date(2022, 11, 1),
                 };
+            else if (id === '3030')
+                return {
+                    _id: '3030',
+                    participantsList: [250, 251],
+                    limitPeople: 500,
+                    save: async () => {},
+                    initDate: new Date(2022, 11, 1),
+                    ageLimit: 18,
+                };
             else
                 return {
                     _id: id,
@@ -35,10 +43,16 @@ describe('POST /v1/events/{id}/subscribe', () => {
         participantSpy = jest
             .spyOn(Participant, 'findById')
             .mockImplementation((id) => {
-                return {
-                    _id: id,
-                    birthDate: new Date(2001, 5, 22),
-                };
+                if (id === '3000')
+                    return {
+                        _id: id,
+                        birthDate: new Date(2008, 5, 22),
+                    };
+                else
+                    return {
+                        _id: id,
+                        birthDate: new Date(2001, 5, 22),
+                    };
             });
     });
 
@@ -59,10 +73,9 @@ describe('POST /v1/events/{id}/subscribe', () => {
             .auth(validToken, { type: 'bearer' })
             .expect(200)
             .expect(function (res) {
-                assert(res.body.success === true);
-                assert(
-                    res.body.message ===
-                        'You are already subscibe to this event'
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe(
+                    'You are succesfully subscribed to this event'
                 );
             });
     });
@@ -73,8 +86,43 @@ describe('POST /v1/events/{id}/subscribe', () => {
             .auth(validToken, { type: 'bearer' })
             .expect(200)
             .expect(function (res) {
-                assert(res.body.success === false);
-                assert(res.body.message === 'Participant already subscribe');
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Participant already subscribed');
+            });
+    });
+
+    const validToken2 = jwt.sign(
+        { id: 2020, type: 'Participant' }, // id partecipante
+        process.env.JWT_SECRET,
+        { expiresIn: 86400 }
+    );
+    // TODO prima riga id o id=1111, success = false o true
+    test('POST /v1/events/1111/subscribe to an event already full', () => {
+        return request(app)
+            .post('/v1/events/1111/subscribe')
+            .auth(validToken2, { type: 'bearer' })
+            .expect(200)
+            .expect(function (res) {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Event is full');
+            });
+    });
+    const validToken3 = jwt.sign(
+        { id: 3030, type: 'Participant' }, // id partecipante
+        process.env.JWT_SECRET,
+        { expiresIn: 86400 }
+    );
+
+    test('POST /v1/events/{id}/subscribe to an event with an age limit', () => {
+        return request(app)
+            .post('/v1/events/3030/subscribe')
+            .auth(validToken3, { type: 'bearer' })
+            .expect(200)
+            .expect(function (res) {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe(
+                    'Too young to subscribe to this event'
+                );
             });
     });
 
@@ -90,8 +138,8 @@ describe('POST /v1/events/{id}/subscribe', () => {
             .auth(notValidToken, { type: 'bearer' })
             .expect(401)
             .expect(function (res) {
-                assert(res.body.success === false);
-                assert(res.body.message === 'Authentication token not valid');
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Authentication token not valid');
             });
     });
 
@@ -100,8 +148,10 @@ describe('POST /v1/events/{id}/subscribe', () => {
             .post('/v1/events/2010/subscribe')
             .expect(401)
             .expect(function (res) {
-                assert(res.body.success === false);
-                assert(res.body.message === 'Authentication token not found');
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Authorization token not found');
             });
     });
 });
+// TODO expect(res.body.success).toBe(false);
+// expect(res.body.message).toBe('');.
