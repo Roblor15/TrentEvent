@@ -285,4 +285,152 @@ router.put('/:id/responde', check('Participant'), async function (req, res) {
     }
 });
 
+/**
+ * @swagger
+ * /v1/users/modify-private-events:
+ *   put:
+ *     description: Modify your private events
+ *     tags:
+ *       - PrivateEvent
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ["initDate", "endDate", "address", "price", "photos", "description"]
+ *
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     participant:
+ *                       $ref: '#/components/schemas/Participant'
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+
+router.put(
+    '/:id/modify-private-event',
+    check('Participant'),
+    async function (req, res) {
+        try {
+            const event = await PrivateEvent.findById(req.params.id);
+
+            if (event) {
+                event.initDate = req.body.initDate;
+                event.endDate = req.body.endDate;
+                event.address = req.body.address;
+                event.price = req.body.price;
+                // event.photos = req.body.photos; TODO
+                event.description = req.body.description;
+
+                await event.update();
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'Your changes have been saved',
+                });
+            } else {
+                return res.status(200).json({
+                    success: false,
+                    message: "The event doesn't exist",
+                });
+            }
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
+        }
+    }
+);
+
+/**
+ * @swagger
+ * /v1/users/delete-private-events:
+ *   delete:
+ *     description: Delete your private events
+ *     tags:
+ *       - Event
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *                $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.delete('/:id', check('Participant'), async function (req, res) {
+    try {
+        const event = await PrivateEvent.findById(req.params.id);
+        if (!event) {
+            return res.status(200).json({
+                success: false,
+                message: "The event doesn't exist",
+            });
+        }
+        if (event.creator === req.user.id) {
+            await PrivateEvent.deleteOne({
+                _id: req.params.id,
+            });
+            return res.status(200).json({
+                success: true,
+                message: 'Your has been cancelled',
+            });
+        } else {
+            return res.status(200).json({
+                success: false,
+                message: "you can't delete this event",
+            });
+        }
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
 module.exports = router;

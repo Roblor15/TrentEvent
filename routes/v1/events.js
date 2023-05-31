@@ -408,7 +408,7 @@ router.delete('/:id', check('Manager'), async function (req, res) {
                 message: "The event doesn't exist",
             });
         }
-        if (event.creator === req.user.id) {
+        if (event.manager === req.user.id) {
             await Event.deleteOne({
                 _id: req.params.id,
             });
