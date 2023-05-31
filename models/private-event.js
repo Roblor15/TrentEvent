@@ -58,10 +58,16 @@ const privateeventSchema = new Schema({
 });
 
 privateeventSchema.pre('validate', function (next) {
-    if (this.date > new Date()) {
+    if (this.initDate > new Date()) {
         next();
     }
     next(new Error('The date is old'));
 });
 
+privateeventSchema.pre('validate', function (next) {
+    if (this.endDate > this.initDate) {
+        next();
+    }
+    next(new Error("You can't end an event before it started"));
+});
 module.exports = mongoose.model('PrivateEvent', privateeventSchema);
