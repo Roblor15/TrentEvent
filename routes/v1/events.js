@@ -63,7 +63,7 @@ router.get('/', async function (req, res) {
         const events = await Event.find().where('initDate').gt(new Date());
         res.status(200).json({
             success: true,
-            message: 'Here is the list of events:',
+            message: 'Here is the list of events',
             events,
         });
     } catch (e) {

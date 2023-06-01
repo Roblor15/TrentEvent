@@ -216,3 +216,61 @@ describe('POST /v1/events', () => {
             });
     });
 });
+
+describe('GET /v1/events', () => {
+    const mongoose = require('mongoose');
+    const Event = require('../../models/event');
+    let db;
+
+    const event = {
+        initDate: new Date(2023, 7, 19),
+        endDate: new Date(2023, 7, 19),
+        categories: 'musica',
+        manager: '507f1f77bcf86cd799439011',
+    };
+
+    beforeAll(async () => {
+        jest.setTimeout(10000);
+        db = await mongoose.connect(process.env.MONGODB_URL, {
+            dbName: 'test',
+        });
+
+        await Event.create(event);
+        await Event.create({
+            ...event,
+            initDate: new Date(2022, 9, 4),
+            endDate: new Date(2022, 9, 5),
+        });
+        await Event.create({
+            ...event,
+            initDate: new Date(2025, 9, 4),
+            endDate: new Date(2025, 9, 5),
+        });
+        await Event.create({
+            ...event,
+            initDate: new Date(2010, 1, 1),
+            endDate: new Date(2010, 3, 15),
+        });
+        await Event.create({
+            ...event,
+            initDate: new Date(2021, 12, 31),
+            endDate: new Date(2022, 1, 1),
+        });
+    });
+
+    afterAll(async () => {
+        await Event.deleteMany();
+        await db?.disconnect();
+    });
+
+    test("GET /v1/events Check new event's data ", () => {
+        return request(app)
+            .get('/v1/events')
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe('Here is the list of events');
+                expect(res.body.events).toBe([]);
+            });
+    });
+});
