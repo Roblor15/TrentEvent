@@ -9,6 +9,8 @@ const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
 const checkProperties = require('../../lib/check-properties');
 const { check } = require('../../lib/authorization');
+const { findOne, findById } = require('../../models/private-event');
+const { error } = require('console');
 
 const router = express.Router();
 
@@ -725,5 +727,34 @@ router.put(
         }
     }
 );
+
+router.get('/managers/:id', async function (req, res) {
+    try {
+        const manager = await Manager.findbyId(req.params.id);
+        if (check('Manager') && req.user.id === manager.id)
+            res.status(200).json({
+                localName: manager.localName,
+                email: manager.email,
+                verifiedEmail: manager.verifiedEmail,
+                //password: manager.password,
+                address: manager.address,
+                localType: manager.localType,
+                photos: manager.photos,
+                approvation: manager.approvation,
+            });
+        else {
+            res.status(200).json({
+                localName: manager.localName,
+                email: manager.email,
+                //password: manager.password,
+                address: manager.address,
+                localType: manager.localType,
+                photos: manager.photos,
+            });
+        }
+    } catch (e) {
+        res.status(501).send(e.toString());
+    }
+});
 
 module.exports = router;
