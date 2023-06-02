@@ -58,9 +58,9 @@ const { diffInYears } = require('../../lib/general');
  *            schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.get('/', async function (req, res) {
+router.get('/', async function (_req, res) {
     try {
-        const events = await Event.find().where('initDate').gt(new Date());
+        const events = await Event.find({ initDate: { $gt: new Date() } });
         res.status(200).json({
             success: true,
             message: 'Here is the list of events',

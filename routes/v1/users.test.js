@@ -2,7 +2,6 @@ const app = require('../../app');
 
 const mongoose = require('mongoose');
 const request = require('supertest');
-const assert = require('assert');
 
 const Manager = require('../../models/manager');
 
@@ -39,6 +38,7 @@ describe('POST ' + base + 'signup-manager', () => {
             number: 1,
             cap: '00000',
         };
+
         return request(app)
             .post(url)
             .field('localName', 'ciao')
@@ -47,42 +47,129 @@ describe('POST ' + base + 'signup-manager', () => {
             .field('localType', 'Bar')
             .expect(200)
             .expect((res) => {
-                assert(res.body.success === true);
+                expect(res.body.success).toBe(true);
             });
     });
 
     test('POST ' + url + ' with email already registered', async () => {
+        const address = {
+            country: 'Italia',
+            city: 'Trento',
+            street: 'via bella',
+            number: 1,
+            cap: '00000',
+        };
+
         await Manager.create({
             localName: 'Bello Bar',
             email: 'ciao@hotmail.it',
-            address: {
-                country: 'Italia',
-                city: 'Trento',
-                street: 'via bella',
-                number: 1,
-                cap: '00000',
-            },
+            address,
             localType: 'Bar',
         });
 
         return request(app)
             .post(url)
-            .send({
-                localName: 'Bar Bello',
-                email: 'ciao@hotmail.it',
-                address: {
-                    country: 'Italia',
-                    city: 'Castel Ivano',
-                    street: 'Via dei Caboeri',
-                    number: 1,
-                    cap: '38059',
-                },
-                localType: 'Bar',
-            })
+            .field('localName', 'ciao')
+            .field('email', 'ciao@hotmail.it')
+            .field('address', JSON.stringify(address))
+            .field('localType', 'Bar')
             .expect(200)
             .expect((res) => {
-                assert(res.body.success === false);
-                assert(res.body.message === 'Email already used');
+                expect(res.body.success).toBe(false);
+                expect(res.body.message === 'Email already used');
+            });
+    });
+
+    test('POST ' + url + ' with email not valid', () => {
+        const address = {
+            country: 'Italia',
+            city: 'Trento',
+            street: 'via bella',
+            number: 1,
+            cap: '00000',
+        };
+
+        return request(app)
+            .post(url)
+            .field('localName', 'ciao')
+            .field('email', 'ciao@.ie')
+            .field('address', JSON.stringify(address))
+            .field('localType', 'Bar')
+            .expect(501)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+            });
+    });
+});
+
+describe('PUT ' + base + 'signup-manager', () => {
+    const url = base + 'signup-manager';
+
+    let managerSpy;
+    beforeAll(() => {
+        const address = {
+            country: 'Italia',
+            city: 'Trento',
+            street: 'via bella',
+            number: 1,
+            cap: '00000',
+        };
+        managerSpy = jest
+            .spyOn(Manager, 'findById')
+            .mockImplementation((id) => {
+                if (id === 1000)
+                    return {
+                        verifiedEmail: true,
+                        localName: 'ciao',
+                        address,
+                        localType: 'Bar',
+                    };
+                if (id === 1001)
+                    return {
+                        verifiedEmail: false,
+                        localName: 'ciao',
+                        address,
+                        localType: 'Bar',
+                    };
+            });
+    });
+
+    afterAll(() => {
+        managerSpy.mockRestore();
+    });
+
+    test('PUT ' + url + ' right request', () => {
+        return request(app)
+            .put(url)
+            .send({ id: 1000, approved: true })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe("Manager's request updated");
+            });
+    });
+
+    test('PUT ' + url + ' user does not exist', () => {
+        return request(app)
+            .put(url)
+            .send({ id: 1100, approved: true })
+            .expect(501)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Error: User not found');
+            });
+    });
+
+    test('PUT ' + url + " user's email not verified", () => {
+        return request(app)
+            .put(url)
+            .send({ id: 1001, approved: true })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe(
+                    "Manager's email is not confermed"
+                );
             });
     });
 });

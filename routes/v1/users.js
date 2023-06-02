@@ -38,7 +38,7 @@ const upload = multer({ storage: multer.memoryStorage() });
  *                     items:
  *                       type: string
  *                       format: binary
- *                   email:
+ *                   sendEmail:
  *                     type: boolean
  *                     description: Decide if the system sends an email for conferming it
  *     responses:
@@ -68,8 +68,8 @@ const upload = multer({ storage: multer.memoryStorage() });
  */
 router.post(
     '/signup-manager',
-    checkProperties(['localName', 'email', 'address', 'localType']),
     upload.array('photos', 5),
+    checkProperties(['localName', 'email', 'address', 'localType']),
     async function (req, res) {
         try {
             // retrieve email and address from body
@@ -103,15 +103,15 @@ router.post(
             });
 
             // send email with the link to conferm the email address
-            if (req.body.email) {
-                await sendMail({
+            if (req.body.sendEmail === 'true') {
+                sendMail({
                     to: result.email,
                     subject: 'Conferma Email 🚀',
                     html: `<p>Ciao ${result.localName},</p>
                    <p>Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a>.<br/>
                     Verrai ricontattato con la rispsta di un supervisore.</p>`,
                     textEncoding: 'base64',
-                });
+                }).catch((e) => console.log(e));
             }
 
             // response with main fields of manager
@@ -159,7 +159,7 @@ router.post(
  *                 description: If the request is approved or not.
  *               sendEmail:
  *                 type: boolean
- *                 description: Decide if send
+ *                 description: Decide if send an email
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -230,7 +230,7 @@ router.put(
                         <p>La tua richiesta per diventare Organizzatore di eventi è stata rifiutata.</p>`;
                 }
 
-                if (req.body.email) {
+                if (req.body.sendEmail === 'true') {
                     // send the email
                     await sendMail({
                         to: user.email,
@@ -455,12 +455,12 @@ router.post('/login', checkProperties(['password']), async function (req, res) {
                 user = await Manager.findOne({ email: req.body.email });
 
                 // control if manager was approved
-                if (!user.approvation === undefined)
+                if (user.approvation === undefined)
                     return res.status(200).json({
                         success: false,
                         message: "Manager's request is not approved yet",
                     });
-                if (!user.approvation.approved === undefined)
+                if (user.approvation.approved === false)
                     return res.status(200).json({
                         success: false,
                         message: "Manager's request is not approved",
