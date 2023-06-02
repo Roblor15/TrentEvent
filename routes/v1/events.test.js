@@ -156,43 +156,56 @@ describe('POST /v1/events/{id}/subscribe', () => {
 // TODO expect(res.body.success).toBe(false);
 // expect(res.body.message).toBe('');.
 
+
 describe('POST /v1/events', () => {
-    const mongoose = require('mongoose');
-    const Manager = require('../../models/manager');
-    let db;
-
-    beforeAll(async () => {
-        jest.setTimeout(10000);
-        db = await mongoose.connect(process.env.MONGODB_URL, {
-            dbName: 'test',
-        });
-    });
-
-    afterAll(async () => {
-        await db?.disconnect();
-    });
-    afterEach(async () => {
-        await Manager.deleteMany();
-    });
-
-    test('POST /v1/events created', () => {
+    let managerSpy;
+    beforeAll(() => {
         const address = {
-            country: 'Italy',
+            country: 'Italia',
             city: 'Trento',
-            street: 'via Roma',
-            number: '7',
-            cap: '38123',
+            street: 'via bella',
+            number: 1,
+            cap: '00000',
         };
-        /* const photos = [{ _id: '09' }, { _id: '088098' }]; */
 
+        managerSpy = jest
+            .spyOn(Manager, 'findById')
+            .mockImplementation((id) => {
+                if (id === 1010)
+                    return {
+                        localName: 'Bar Stella',
+                        verifiedEmail: true,
+                        address,
+                        localType: 'Bar',
+                        photos: [],
+                        approvation: true,
+                    };
+            });
+    });
+
+    afterAll(() => {
+        managerSpy.mockRestore();
+    });
+
+    const validToken = jwt.sign(
+        { id: 1010, type: 'Manager' },
+        process.env.JWT_SECRET,
+        { expiresIn: 86400 }
+    );
+
+    test('POST /v1/events create event', () => {
         return request(app)
             .post('/v1/events')
-            .field('initDate', new Date(2022, 9, 4))
-            .field('endDate', new Date(2022, 9, 5))
-            .field('name', 'Bar Stella')
-            .field('description', 'Bar di Trento')
+            .send({
+                initDate: new Date(2023, 11, 1),
+                endDate: new Date(2023, 11, 2),
+                name: 'Bar Stella',
+                description: 'Bar di Trento',
+                manager: 1010,
+            })
+            .auth(validToken, { type: 'bearer' })
             .expect(200)
-            .expect(function (res) {
+            .expect((res) => {
                 expect(res.body.success).toBe(true);
             });
     });
