@@ -214,3 +214,65 @@ describe('PUT /v1/private-events/{id}/invite', () => {
             });
     });
 });
+
+describe('PUT /v1/private-events/{id}/responde', () => {
+    let eventSpy; // Moking Event.find method
+    let participantSpy; // Moking Event.find method
+
+    beforeAll(() => {
+        participantSpy = jest
+            .spyOn(Participant, 'findById')
+            .mockImplementation((id) => {
+                return {
+                    _id: id,
+                };
+            });
+
+        eventSpy = jest
+            .spyOn(PrivateEvent, 'findById')
+            .mockImplementation((id) => {
+                if (id === 1010)
+                    return {
+                        _id: id,
+                    };
+                else if (id === 2020)
+                    return {
+                        _id: id,
+                        participantList: [{ user: 1000, state: 'Pending' }],
+                    };
+            });
+    });
+
+    afterAll(() => {
+        eventSpy.mockRestore();
+        participantSpy.mockRestore();
+    });
+
+    const validToken = jwt.sign(
+        { id: 1000, type: 'Participant' },
+        process.env.JWT_SECRET,
+        { expiresIn: 86400 }
+    );
+
+    test('PUT /v1/private-events/{id}/responde to an invitation', () => {
+        return request(app)
+            .put('/v1/private-events/2020/responde')
+            .auth(validToken, { type: 'bearer' })
+            .expect(200)
+            .expect(function (res) {
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe('Your response is saved');
+            });
+    });
+
+    test('PUT /v1/private-events/{id}/responde to an event where you are not invited', () => {
+        return request(app)
+            .put('/v1/private-events/1010/responde')
+            .auth(validToken, { type: 'bearer' })
+            .expect(200)
+            .expect(function (res) {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('You have not been invited');
+            });
+    });
+});

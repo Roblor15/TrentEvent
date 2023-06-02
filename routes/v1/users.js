@@ -746,7 +746,6 @@ router.get('/managers/:id', async function (req, res) {
             res.status(200).json({
                 localName: manager.localName,
                 email: manager.email,
-                //password: manager.password,
                 address: manager.address,
                 localType: manager.localType,
                 photos: manager.photos,
