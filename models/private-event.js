@@ -58,10 +58,13 @@ const privateeventSchema = new Schema({
 });
 
 privateeventSchema.pre('validate', function (next) {
+    if (this.initDate === undefined || this.endDate === undefined) {
+        next(new Error('Date required'));
+    }
     if (this.initDate > new Date()) {
         next();
     }
-    next(new Error('The date is old'));
+    next(new Error('The initDate is old'));
 });
 
 privateeventSchema.pre('validate', function (next) {

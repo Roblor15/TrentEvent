@@ -3,77 +3,12 @@ const app = require('../../app');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 const Participant = require('../../models/participant');
+const PrivateEvent = require('../../models/private-event');
 
 describe('POST /v1/private-events', () => {
-    let eventSpy; // Moking Event.find method
     let participantSpy; // Moking Event.find method
 
     beforeAll(() => {
-        const PrivateEvent = require('../../models/private-event');
-
-        eventSpy = jest
-            .spyOn(PrivateEvent, 'create')
-            .mockImplementation((id) => {
-                if (id === '1010')
-                    return {
-                        _id: '1010',
-                        endDate: new Date(2024, 1, 1),
-                        address: {
-                            country: 'Italy',
-                            city: 'Trento',
-                            street: 'via Manci',
-                            number: '1',
-                            cap: '38049',
-                        },
-                        description: 'ciao',
-                        price: 5,
-                    };
-                else if (id === '2020')
-                    return {
-                        _id: '2020',
-                        initDate: new Date(2021, 1, 1),
-                        endDate: new Date(2024, 1, 1),
-                        address: {
-                            country: 'Italy',
-                            city: 'Trento',
-                            street: 'via Manci',
-                            number: '1',
-                            cap: '38049',
-                        },
-                        description: 'ciao',
-                        price: 5,
-                    };
-                else if (id === '3030')
-                    return {
-                        _id: '3030',
-                        initDate: new Date(2025, 1, 1),
-                        endDate: new Date(2024, 1, 1),
-                        address: {
-                            country: 'Italy',
-                            city: 'Trento',
-                            street: 'via Manci',
-                            number: '1',
-                            cap: '38049',
-                        },
-                        description: 'ciao',
-                        price: 5,
-                    };
-                else
-                    return {
-                        initDate: new Date(2024, 1, 1),
-                        endDate: new Date(2024, 1, 2),
-                        address: {
-                            country: 'Italy',
-                            city: 'Trento',
-                            street: 'via Manci',
-                            number: '1',
-                            cap: '38049',
-                        },
-                        description: 'ciao',
-                        price: 5,
-                    };
-            });
-
         participantSpy = jest
             .spyOn(Participant, 'findById')
             .mockImplementation((id) => {
@@ -85,7 +20,6 @@ describe('POST /v1/private-events', () => {
     });
 
     afterAll(() => {
-        eventSpy.mockRestore();
         participantSpy.mockRestore();
     });
 
@@ -95,30 +29,60 @@ describe('POST /v1/private-events', () => {
         { expiresIn: 86400 }
     );
 
-    test('POST /v1/private-events/{id}/create event', () => {
+    test('POST /v1/private-events/', () => {
         return request(app)
             .post('/v1/private-events/')
             .auth(validToken, { type: 'bearer' })
+            .send({
+                address: JSON.stringify({
+                    country: 'Italy',
+                    city: 'Trento',
+                    street: 'via Manci',
+                    number: 5,
+                    cap: '38123',
+                    description: 'ciao',
+                    price: 5,
+                }),
+                initDate: new Date(2024, 1, 1),
+                endDate: new Date(2024, 1, 2),
+                price: 5,
+                description: 'ciao',
+                photos: [],
+                creator: 1000,
+                participantList: [],
+            })
             .expect(200)
             .expect(function (res) {
-                expect(res.body).toBe({
-                    initDate: eventSpy.initDate,
-                    endDate: eventSpy.endDate,
-                    address: eventSpy.address,
-                    price: eventSpy.price,
-                    description: eventSpy.description,
-                });
+                expect(res.success).toBe(true);
             });
     });
 
+    // da modificare per far andare il filter delle foto
     test('POST /v1/private-events/1010/create event without initdate', () => {
         return request(app)
             .post('/v1/private-events')
             .auth(validToken, { type: 'bearer' })
+            .send({
+                address: JSON.stringify({
+                    country: 'Italy',
+                    city: 'Trento',
+                    street: 'via Manci',
+                    number: 5,
+                    cap: '38123',
+                    description: 'ciao',
+                    price: 5,
+                }),
+                endDate: new Date(2024, 1, 2),
+                price: 5,
+                description: 'ciao',
+                photos: [],
+                creator: 1000,
+                participantList: [],
+            })
             .expect(501)
             .expect(function (res) {
                 expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe('start date of the event needed');
+                expect(res.body.message).toBe('Error: Date required');
             });
     });
 
@@ -126,10 +90,28 @@ describe('POST /v1/private-events', () => {
         return request(app)
             .post('/v1/private-events')
             .auth(validToken, { type: 'bearer' })
+            .send({
+                address: JSON.stringify({
+                    country: 'Italy',
+                    city: 'Trento',
+                    street: 'via Manci',
+                    number: 5,
+                    cap: '38123',
+                    description: 'ciao',
+                    price: 5,
+                }),
+                initDate: new Date(2021, 1, 1),
+                endDate: new Date(2024, 1, 2),
+                price: 5,
+                description: 'ciao',
+                photos: [],
+                creator: 1000,
+                participantList: [],
+            })
             .expect(501)
             .expect(function (res) {
                 expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe('start date of the event is old');
+                expect(res.body.message).toBe('Error: The initDate is old');
             });
     });
 
@@ -137,10 +119,30 @@ describe('POST /v1/private-events', () => {
         return request(app)
             .post('/v1/private-events')
             .auth(validToken, { type: 'bearer' })
+            .send({
+                address: JSON.stringify({
+                    country: 'Italy',
+                    city: 'Trento',
+                    street: 'via Manci',
+                    number: 5,
+                    cap: '38123',
+                    description: 'ciao',
+                    price: 5,
+                }),
+                initDate: new Date(2024, 1, 2),
+                endDate: new Date(2024, 1, 1),
+                price: 5,
+                description: 'ciao',
+                photos: [],
+                creator: 1000,
+                participantList: [],
+            })
             .expect(501)
             .expect(function (res) {
                 expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe('initDate bigger than endDate');
+                expect(res.body.message).toBe(
+                    "Error: You can't end an event before it started"
+                );
             });
     });
 });
@@ -150,14 +152,12 @@ describe('PUT /v1/private-events/{id}/invite', () => {
     let participantSpy; // Moking Event.find method
 
     beforeAll(() => {
-        const PrivateEvent = require('../../models/private-event');
-
         participantSpy = jest
             .spyOn(Participant, 'findById')
             .mockImplementation((id) => {
                 return {
                     _id: id,
-                    birthDate: new Date(2001, 1, 1),
+                    email: 'ciao@gmail.com',
                 };
             });
 
@@ -166,6 +166,7 @@ describe('PUT /v1/private-events/{id}/invite', () => {
             .mockImplementation((id) => {
                 return {
                     _id: id,
+                    save: async () => {},
                     creator: 1000,
                 };
             });
@@ -187,9 +188,9 @@ describe('PUT /v1/private-events/{id}/invite', () => {
         { expiresIn: 86400 }
     );
 
-    test('PUT /v1/private-events/1000/invite participants to your event', () => {
+    test('PUT /v1/private-events/{id}/invite participants to your event', () => {
         return request(app)
-            .post('/v1/private-events/1000/invite')
+            .put('/v1/private-events/1010/invite')
             .auth(validToken, { type: 'bearer' })
             .expect(200)
             .expect(function (res) {
@@ -200,9 +201,9 @@ describe('PUT /v1/private-events/{id}/invite', () => {
             });
     });
 
-    test('PUT /v1/private-events/2000/invite participants to an event that is not yours', () => {
+    test('PUT /v1/private-events/{id}/invite participants to an event that is not yours', () => {
         return request(app)
-            .post('/v1/private-events/2000/invite')
+            .put('/v1/private-events/2020/invite')
             .auth(validToken2, { type: 'bearer' })
             .expect(200)
             .expect(function (res) {

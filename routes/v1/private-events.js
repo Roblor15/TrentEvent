@@ -106,7 +106,7 @@ router.post('/', check('Participant'), async function (req, res) {
             address: JSON.parse(address),
             photos: req.files
                 // filter images
-                .filter((p) => p.mimetype.startsWith('image'))
+                ?.filter((p) => p.mimetype.startsWith('image'))
                 .map((p) => ({
                     data: p.buffer,
                     contentType: p.mimetype,

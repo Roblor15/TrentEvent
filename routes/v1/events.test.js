@@ -223,21 +223,39 @@ describe('GET /v1/events', () => {
     let db;
 
     const event = {
-        initDate: new Date(2023, 7, 19, 15),
-        endDate: new Date(2023, 7, 19, 15, 30),
+        initDate: new Date(2023, 7, 19),
+        endDate: new Date(2023, 7, 19),
         categories: 'musica',
         manager: '507f1f77bcf86cd799439011',
     };
 
     beforeAll(async () => {
         jest.setTimeout(10000);
-        mongoose
-            .connect(process.env.MONGODB_URL, {
-                dbName: 'test',
-            })
-            .then(async (d) => {
-                db = d;
-            });
+        db = await mongoose.connect(process.env.MONGODB_URL, {
+            dbName: 'test',
+        });
+
+        await Event.create(event);
+        await Event.create({
+            ...event,
+            initDate: new Date(2022, 9, 4),
+            endDate: new Date(2022, 9, 5),
+        });
+        await Event.create({
+            ...event,
+            initDate: new Date(2025, 9, 4),
+            endDate: new Date(2025, 9, 5),
+        });
+        await Event.create({
+            ...event,
+            initDate: new Date(2010, 1, 1),
+            endDate: new Date(2010, 3, 15),
+        });
+        await Event.create({
+            ...event,
+            initDate: new Date(2021, 12, 31),
+            endDate: new Date(2022, 1, 1),
+        });
     });
 
     afterAll(async () => {
@@ -245,53 +263,14 @@ describe('GET /v1/events', () => {
         await db?.disconnect();
     });
 
-    test('GET /v1/events with also old events', async () => {
-        await Event.insertMany(
-            [
-                event,
-                {
-                    ...event,
-                    initDate: new Date(2022, 9, 4),
-                    endDate: new Date(2022, 9, 5),
-                },
-                {
-                    ...event,
-                    initDate: new Date(2025, 9, 4),
-                    endDate: new Date(2025, 9, 5),
-                },
-                {
-                    ...event,
-                    initDate: new Date(2010, 1, 1),
-                    endDate: new Date(2010, 1, 15),
-                },
-                {
-                    ...event,
-                    initDate: new Date(2021, 11, 31),
-                    endDate: new Date(2022, 1, 1),
-                },
-            ],
-            { lean: true }
-        );
+    test("GET /v1/events Check new event's data ", () => {
         return request(app)
             .get('/v1/events')
             .expect(200)
             .expect((res) => {
                 expect(res.body.success).toBe(true);
                 expect(res.body.message).toBe('Here is the list of events');
-                expect(res.body.events).toMatchObject([
-                    {
-                        initDate: '2023-08-19T13:00:00.000Z',
-                        endDate: '2023-08-19T13:30:00.000Z',
-                        categories: 'musica',
-                        manager: '507f1f77bcf86cd799439011',
-                    },
-                    {
-                        initDate: '2025-10-03T22:00:00.000Z',
-                        endDate: '2025-10-04T22:00:00.000Z',
-                        categories: 'musica',
-                        manager: '507f1f77bcf86cd799439011',
-                    },
-                ]);
+                expect(res.body.events).toBe([]);
             });
     });
 });
