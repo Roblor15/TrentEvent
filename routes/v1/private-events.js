@@ -112,16 +112,6 @@ router.post('/', check('Participant'), async function (req, res) {
                     contentType: p.mimetype,
                 })),
         });
-        if (result.initDate < result.endDate)
-            res.status(200).json({
-                success: false,
-                message: 'initDate bigger than endDate',
-            });
-        if (result.initDate < new Date())
-            res.status(200).json({
-                success: false,
-                message: 'initDate start date of the event is old',
-            });
         res.status(200).json({
             initDate: result.initDate,
             endDate: result.endDate,

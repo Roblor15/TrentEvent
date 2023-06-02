@@ -2,6 +2,7 @@ const app = require('../../app');
 
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
+const Participant = require('../../models/participant');
 
 describe('POST /v1/private-events', () => {
     let eventSpy; // Moking Event.find method
@@ -59,7 +60,6 @@ describe('POST /v1/private-events', () => {
                     };
                 else
                     return {
-                        _id: id,
                         initDate: new Date(2024, 1, 1),
                         endDate: new Date(2024, 1, 2),
                         address: {
@@ -74,16 +74,13 @@ describe('POST /v1/private-events', () => {
                     };
             });
 
-        const Participant = require('../../models/participant');
-
         participantSpy = jest
             .spyOn(Participant, 'findById')
             .mockImplementation((id) => {
-                if (id === '3000')
-                    return {
-                        _id: id,
-                        birthDate: new Date(2001, 1, 1),
-                    };
+                return {
+                    _id: id,
+                    birthDate: new Date(2001, 1, 1),
+                };
             });
     });
 
@@ -93,7 +90,7 @@ describe('POST /v1/private-events', () => {
     });
 
     const validToken = jwt.sign(
-        { id: 3000, type: 'Participant' }, // id partecipante
+        { id: 1000, type: 'Participant' }, // id partecipante
         process.env.JWT_SECRET,
         { expiresIn: 86400 }
     );
@@ -118,7 +115,7 @@ describe('POST /v1/private-events', () => {
         return request(app)
             .post('/v1/private-events')
             .auth(validToken, { type: 'bearer' })
-            .expect(200)
+            .expect(501)
             .expect(function (res) {
                 expect(res.body.success).toBe(false);
                 expect(res.body.message).toBe('start date of the event needed');
@@ -129,7 +126,7 @@ describe('POST /v1/private-events', () => {
         return request(app)
             .post('/v1/private-events')
             .auth(validToken, { type: 'bearer' })
-            .expect(200)
+            .expect(501)
             .expect(function (res) {
                 expect(res.body.success).toBe(false);
                 expect(res.body.message).toBe('start date of the event is old');
@@ -140,10 +137,79 @@ describe('POST /v1/private-events', () => {
         return request(app)
             .post('/v1/private-events')
             .auth(validToken, { type: 'bearer' })
-            .expect(200)
+            .expect(501)
             .expect(function (res) {
                 expect(res.body.success).toBe(false);
                 expect(res.body.message).toBe('initDate bigger than endDate');
+            });
+    });
+});
+
+describe('PUT /v1/private-events/{id}/invite', () => {
+    let eventSpy; // Moking Event.find method
+    let participantSpy; // Moking Event.find method
+
+    beforeAll(() => {
+        const PrivateEvent = require('../../models/private-event');
+
+        participantSpy = jest
+            .spyOn(Participant, 'findById')
+            .mockImplementation((id) => {
+                return {
+                    _id: id,
+                    birthDate: new Date(2001, 1, 1),
+                };
+            });
+
+        eventSpy = jest
+            .spyOn(PrivateEvent, 'findById')
+            .mockImplementation((id) => {
+                return {
+                    _id: id,
+                    creator: 1000,
+                };
+            });
+    });
+
+    afterAll(() => {
+        eventSpy.mockRestore();
+        participantSpy.mockRestore();
+    });
+
+    const validToken = jwt.sign(
+        { id: 1000, type: 'Participant' }, // id partecipante
+        process.env.JWT_SECRET,
+        { expiresIn: 86400 }
+    );
+    const validToken2 = jwt.sign(
+        { id: 2000, type: 'Participant' }, // id partecipante
+        process.env.JWT_SECRET,
+        { expiresIn: 86400 }
+    );
+
+    test('PUT /v1/private-events/1000/invite participants to your event', () => {
+        return request(app)
+            .post('/v1/private-events/1000/invite')
+            .auth(validToken, { type: 'bearer' })
+            .expect(200)
+            .expect(function (res) {
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe(
+                    'Your invitations have been sent'
+                );
+            });
+    });
+
+    test('PUT /v1/private-events/2000/invite participants to an event that is not yours', () => {
+        return request(app)
+            .post('/v1/private-events/2000/invite')
+            .auth(validToken2, { type: 'bearer' })
+            .expect(200)
+            .expect(function (res) {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe(
+                    'You are not the owner of the event'
+                );
             });
     });
 });
