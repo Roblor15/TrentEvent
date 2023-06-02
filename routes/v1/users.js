@@ -293,6 +293,9 @@ router.put(
  *                    type: string
  *                    description: the password of the account
  *                    example: ciao1234
+ *                  sendEmail:
+ *                    type: boolean
+ *                    description: decide if send email for confermation
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -325,7 +328,7 @@ router.post(
         'surname',
         'username',
         'email',
-        'bithDate',
+        'birthDate',
         'password',
     ]),
     async function (req, res) {
@@ -352,17 +355,24 @@ router.post(
             // create a Participant instance with all attributes of body
             const result = await Participant.create({
                 ...req.body,
+                birthDate: new Date(
+                    req.body.birthDate.year,
+                    req.body.birthDate.month - 1,
+                    req.body.birthDate.day
+                ),
                 verifiedEmail: false,
             });
 
-            // send email
-            await sendMail({
-                to: result.email,
-                subject: 'Conferma Email 🚀',
-                html: `<p>Ciao ${result.name} ${result.surname},</p>
+            if (req.body.sendEmail === true) {
+                // send email
+                sendMail({
+                    to: result.email,
+                    subject: 'Conferma Email 🚀',
+                    html: `<p>Ciao ${result.name} ${result.surname},</p>
                    <p>La tua iscrizione è andata a buon fine. Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a></p>`,
-                textEncoding: 'base64',
-            });
+                    textEncoding: 'base64',
+                }).catch(console.log);
+            }
 
             // response with main fields of participant
             res.status(200).json({

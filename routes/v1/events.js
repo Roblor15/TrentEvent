@@ -127,24 +127,11 @@ router.post(
             const result = await Event.create({
                 // requests all the attributes of the body
                 ...req.body,
-                address: manager.address,
                 photos: manager.photos.map((p) => p._id),
             });
             res.status(200).json({
                 success: true,
-                event: {
-                    date: result.date,
-                    age_limit: result.age_limit,
-                    event_cost: result.event_cost,
-                    person_limit: result.person_limit,
-                    event_description: result.event_description,
-                    categories: result.categories,
-                    event_manager: result.event_manager,
-                },
-                manager: {
-                    address: result.address,
-                    photos: result.photos,
-                },
+                eventId: result._id.toString(),
             });
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
