@@ -157,60 +157,41 @@ describe('POST /v1/events/{id}/subscribe', () => {
 // expect(res.body.message).toBe('');.
 
 describe('POST /v1/events', () => {
-    let managerSpy;
-    let eventSpy;
+    const mongoose = require('mongoose');
+    const Manager = require('../../models/manager');
+    let db;
 
-    beforeAll(() => {
-        const Manager = require('../../models/manager');
-        const Event = require('../../models/event');
-
-        managerSpy = jest
-            .spyOn(Manager, 'findById')
-            .mockImplementation((id) => {
-                if (id === 1010)
-                    return {
-                        address: {
-                            country: 'Italy',
-                            city: 'Trento',
-                            street: 'via Roma',
-                            number: '7',
-                            cap: '38123',
-                        },
-                        photos: [{ _id: '09' }, { _id: '088098' }],
-                    };
-            });
-
-        eventSpy = jest
-            .spyOn(Event, 'create')
-            .mockImplementation((body) => body);
+    beforeAll(async () => {
+        jest.setTimeout(10000);
+        db = await mongoose.connect(process.env.MONGODB_URL, {
+            dbName: 'test',
+        });
     });
 
-    afterAll(() => {
-        managerSpy.mockRestore();
-        eventSpy.mockRestore();
+    afterAll(async () => {
+        await db?.disconnect();
     });
-    const validToken = jwt.sign(
-        { id: 1010, type: 'Manager' },
-        process.env.JWT_SECRET,
-        { expiresIn: 86400 }
-    );
+    afterEach(async () => {
+        await Manager.deleteMany();
+    });
+
     test('POST /v1/events created', () => {
+        const address = {
+            country: 'Italy',
+            city: 'Trento',
+            street: 'via Roma',
+            number: '7',
+            cap: '38123',
+        };
+        /* const photos = [{ _id: '09' }, { _id: '088098' }]; */
+
         return request(app)
             .post('/v1/events')
-            .auth(validToken, { type: 'bearer' })
-            .send({
-                date: new Date(2023, 11, 2),
-                event_description: 'Bar di Trento',
-                address: {
-                    country: 'Italy',
-                    city: 'Trento',
-                    street: 'via Roma',
-                    number: '7',
-                    cap: '38123',
-                },
-                photos: [{ _id: '09' }, { _id: '088098' }],
-            })
-            .expect(200) // expected 200 "OK", got 400 "Bad Request"
+            .field('initDate', new Date(2022, 9, 4))
+            .field('endDate', new Date(2022, 9, 5))
+            .field('name', 'Bar Stella')
+            .field('description', 'Bar di Trento')
+            .expect(200)
             .expect(function (res) {
                 expect(res.body.success).toBe(true);
             });
