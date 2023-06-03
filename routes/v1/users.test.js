@@ -221,7 +221,7 @@ describe('POST ' + base + 'signup-user', () => {
     });
 
     test('POST ' + url + ' right request', () => {
-        request(app)
+        return request(app)
             .post(url)
             .send({
                 ...fakeUser,
@@ -236,7 +236,7 @@ describe('POST ' + base + 'signup-user', () => {
     });
 
     test('POST ' + url + ' manager already with the same email', () => {
-        request(app)
+        return request(app)
             .post(url)
             .send({ ...fakeUser, email: 'ciao@ciao.it' })
             .expect(200)
@@ -247,7 +247,7 @@ describe('POST ' + base + 'signup-user', () => {
     });
 
     test('POST ' + url + ' participant already with the same email', () => {
-        request(app)
+        return request(app)
             .post(url)
             .send({ ...fakeUser, email: 'ciaociao@ciao.it' })
             .expect(200)
@@ -258,13 +258,163 @@ describe('POST ' + base + 'signup-user', () => {
     });
 
     test('POST ' + url + ' participant already with the same username', () => {
-        request(app)
+        return request(app)
             .post(url)
-            .send({ ...fakeUser, username: 'ciaociao' })
+            .send({ ...fakeUser, username: 'ciaociao', email: 'ciao@ciao.com' })
             .expect(200)
             .expect((res) => {
                 expect(res.body.success).toBe(false);
                 expect(res.body.message).toBe('Username already used');
+            });
+    });
+});
+
+describe('POST ' + base + 'login', () => {
+    const url = base + 'login';
+    let participantSpy;
+    let managerSpy;
+
+    beforeAll(() => {
+        participantSpy = jest
+            .spyOn(Participant, 'findOne')
+            .mockImplementation(({ email, username }) => {
+                if (email === 'ciaociao@ciao.it')
+                    return {
+                        email,
+                        verifyPassword: async (pass) => pass === 'test',
+                    };
+                if (username === 'ciaociao')
+                    return {
+                        username,
+                        verifyPassword: async (pass) => pass === 'test',
+                    };
+                return;
+            });
+        managerSpy = jest
+            .spyOn(Manager, 'findOne')
+            .mockImplementation(({ email }) => {
+                if (email === 'ciao@ciao.it')
+                    return {
+                        email,
+                        approvation: { approved: true },
+                        verifyPassword: async (pass) => pass === 'test',
+                    };
+                if (email === 'ciao1@ciao.it')
+                    return {
+                        email,
+                        verifyPassword: async (pass) => pass === 'test',
+                    };
+                if (email === 'ciao2@ciao.it')
+                    return {
+                        email,
+                        approvation: { approved: false },
+                        verifyPassword: async (pass) => pass === 'test',
+                    };
+                return;
+            });
+    });
+
+    afterAll(() => {
+        participantSpy.mockRestore();
+        managerSpy.mockRestore();
+    });
+
+    test('POST ' + url + ' participant login with email', () => {
+        return request(app)
+            .post(url)
+            .send({
+                credential: 'ciaociao@ciao.it',
+                password: 'test',
+            })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe('Enjoy your token!');
+            });
+    });
+
+    test('POST ' + url + ' participant login with username', () => {
+        return request(app)
+            .post(url)
+            .send({
+                credential: 'ciaociao',
+                password: 'test',
+            })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe('Enjoy your token!');
+            });
+    });
+
+    test('POST ' + url + ' manager login', () => {
+        return request(app)
+            .post(url)
+            .send({
+                credential: 'ciao@ciao.it',
+                password: 'test',
+            })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe('Enjoy your token!');
+            });
+    });
+
+    test('POST ' + url + ' not signup user', () => {
+        return request(app)
+            .post(url)
+            .send({ credential: 'ciaociaociao', password: 'test' })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('User not found');
+            });
+    });
+
+    test('POST ' + url + ' with wrong password', () => {
+        return request(app)
+            .post(url)
+            .send({
+                credential: 'ciao@ciao.it',
+                password: 'wrongTest',
+            })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Wrong password');
+            });
+    });
+
+    test('POST ' + url + ' manager not already approved', () => {
+        return request(app)
+            .post(url)
+            .send({
+                credential: 'ciao1@ciao.it',
+                password: 'wrongTest',
+            })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe(
+                    "Manager's request is not approved yet"
+                );
+            });
+    });
+
+    test('POST ' + url + ' manager not approved', () => {
+        return request(app)
+            .post(url)
+            .send({
+                credential: 'ciao2@ciao.it',
+                password: 'wrongTest',
+            })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe(
+                    "Manager's request is not approved"
+                );
             });
     });
 });

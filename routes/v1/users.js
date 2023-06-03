@@ -8,7 +8,7 @@ const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
 const checkProperties = require('../../lib/check-properties');
 const { check } = require('../../lib/authorization');
-const { generatePassword } = require('../../lib/general');
+const { generatePassword, isEmail } = require('../../lib/general');
 
 const router = express.Router();
 
@@ -396,25 +396,15 @@ router.post(
  *       content:
  *         application/json:
  *           schema:
- *             oneOf:
- *               - type: object
- *                 required: ["email", "password"]
- *                 properties:
- *                   email:
- *                     type: string
- *                     description: The email of the user.
- *                   password:
- *                     type: string
- *                     description: The password of the user.
- *               - type: object
- *                 required: ["username", "password"]
- *                 properties:
- *                   username:
- *                     type: string
- *                     description: The username of the user.
- *                   password:
- *                     type: string
- *                     description: The password of the user.
+ *             type: object
+ *             required: ["credential", "password"]
+ *             properties:
+ *               credential:
+ *                 type: string
+ *                 description: The email or the username of the user.
+ *               password:
+ *                 type: string
+ *                 description: The password of the user.
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -441,68 +431,77 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/login', checkProperties(['password']), async function (req, res) {
-    try {
-        let user,
-            type = 'Participant';
+router.post(
+    '/login',
+    checkProperties(['credential', 'password']),
+    async function (req, res) {
+        try {
+            let user,
+                type = 'Participant';
 
-        // if body contains username it has to be a participant
-        if (req.body.username) {
-            // find the participant
-            user = await Participant.findOne({
-                username: req.body.username,
-            });
-        } else {
-            // find the participant or the manager
-            user = await Participant.findOne({ email: req.body.email });
-            if (!user) {
-                user = await Manager.findOne({ email: req.body.email });
+            // if body contains username it has to be a participant
+            if (!isEmail(req.body.credential)) {
+                // find the participant
+                user = await Participant.findOne({
+                    username: req.body.credential,
+                });
+            } else {
+                // find the participant or the manager
+                user = await Participant.findOne({
+                    email: req.body.credential,
+                });
 
-                // control if manager was approved
-                if (user.approvation === undefined)
-                    return res.status(200).json({
-                        success: false,
-                        message: "Manager's request is not approved yet",
-                    });
-                if (user.approvation.approved === false)
-                    return res.status(200).json({
-                        success: false,
-                        message: "Manager's request is not approved",
+                if (!user) {
+                    user = await Manager.findOne({
+                        email: req.body.credential,
                     });
 
-                // change type to Manager
-                type = 'Manager';
+                    // control if manager was approved
+                    if (user.approvation === undefined)
+                        return res.status(200).json({
+                            success: false,
+                            message: "Manager's request is not approved yet",
+                        });
+                    if (user.approvation.approved === false)
+                        return res.status(200).json({
+                            success: false,
+                            message: "Manager's request is not approved",
+                        });
+
+                    // change type to Manager
+                    type = 'Manager';
+                }
             }
-        }
-        // control if user is found
-        if (!user)
-            return res
-                .status(200)
-                .json({ success: false, message: 'User not found' });
-        // verify the password
-        if (!(await user.verifyPassword(req.body.password)))
-            return res
-                .status(200)
-                .json({ success: false, message: 'Wrong password' });
-        // user authenticated -> create a token
-        const payload = {
-            email: user.email,
-            id: user._id,
-            type,
-        };
-        const options = { expiresIn: 86400 }; // expires in 24 hours
-        const token = jwt.sign(payload, process.env.JWT_SECRET, options);
+            // control if user is found
+            if (!user)
+                return res
+                    .status(200)
+                    .json({ success: false, message: 'User not found' });
+            // verify the password
+            if (!(await user.verifyPassword(req.body.password)))
+                return res
+                    .status(200)
+                    .json({ success: false, message: 'Wrong password' });
+            // user authenticated -> create a token
+            const payload = {
+                email: user.email,
+                id: user._id,
+                type,
+            };
+            const options = { expiresIn: 86400 }; // expires in 24 hours
+            const token = jwt.sign(payload, process.env.JWT_SECRET, options);
 
-        // response with with the token
-        res.status(200).json({
-            success: true,
-            message: 'Enjoy your token!',
-            token: token,
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
+            // response with with the token
+            res.status(200).json({
+                success: true,
+                message: 'Enjoy your token!',
+                token: token,
+            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
+        }
     }
-});
+);
 
 /**
  * @swagger
