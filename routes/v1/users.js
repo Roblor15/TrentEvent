@@ -1,7 +1,6 @@
 const express = require('express');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 
 const Manager = require('../../models/manager');
 const Participant = require('../../models/participant');
@@ -9,8 +8,7 @@ const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
 const checkProperties = require('../../lib/check-properties');
 const { check } = require('../../lib/authorization');
-const { findOne, findById } = require('../../models/private-event');
-const { error } = require('console');
+const { generatePassword } = require('../../lib/general');
 
 const router = express.Router();
 
@@ -656,19 +654,10 @@ router.post(
                 token: token,
             });
         } catch (e) {
-            res.status(501).send(e.toString());
+            res.status(501).json({ success: false, message: e.toString() });
         }
     }
 );
-
-// Function that create a random password
-const generatePassword = (
-    length = 20,
-    wishlist = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$'
-) =>
-    Array.from(crypto.randomFillSync(new Uint32Array(length)))
-        .map((x) => wishlist[x % wishlist.length])
-        .join('');
 
 /**
  * @swagger
@@ -733,7 +722,7 @@ router.put(
                 message: 'Password changed',
             });
         } catch (e) {
-            res.status(501).send(e.toString());
+            res.status(501).json({ success: false, message: e.toString() });
         }
     }
 );
@@ -741,28 +730,42 @@ router.put(
 router.get('/managers/:id', async function (req, res) {
     try {
         const manager = await Manager.findbyId(req.params.id);
-        if (check('Manager') && req.user.id === manager.id)
-            res.status(200).json({
+
+        res.status(200).json({
+            success: true,
+            message: 'Manager infos',
+            infos: {
+                localName: manager.localName,
+                email: manager.email,
+                address: manager.address,
+                localType: manager.localType,
+                photos: manager.photos,
+            },
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
+router.get('/manager', check('Manager'), async function (req, res) {
+    try {
+        const manager = await Manager.findById(req.params.id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Your infos',
+            infos: {
                 localName: manager.localName,
                 email: manager.email,
                 verifiedEmail: manager.verifiedEmail,
-                //password: manager.password,
                 address: manager.address,
                 localType: manager.localType,
                 photos: manager.photos,
                 approvation: manager.approvation,
-            });
-        else {
-            res.status(200).json({
-                localName: manager.localName,
-                email: manager.email,
-                address: manager.address,
-                localType: manager.localType,
-                photos: manager.photos,
-            });
-        }
+            },
+        });
     } catch (e) {
-        res.status(501).send(e.toString());
+        res.status(501).json({ success: false, message: e.toString() });
     }
 });
 
