@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const request = require('supertest');
 
 const Manager = require('../../models/manager');
+const Participant = require('../../models/participant');
 
 const base = '/v1/users/';
 
@@ -13,13 +14,16 @@ describe('POST ' + base + 'signup-manager', () => {
 
     beforeAll(async () => {
         jest.setTimeout(10000);
-        db = await mongoose.connect(process.env.MONGODB_URL, {
-            dbName: 'test',
-        });
+        db = mongoose
+            .connect(process.env.MONGODB_URL, {
+                dbName: 'test',
+            })
+            .then((b) => (db = b));
     });
     afterAll(async () => {
         await db?.disconnect();
     });
+
     afterEach(async () => {
         await Manager.deleteMany();
     });
@@ -170,6 +174,97 @@ describe('PUT ' + base + 'signup-manager', () => {
                 expect(res.body.message).toBe(
                     "Manager's email is not confermed"
                 );
+            });
+    });
+});
+
+describe('POST ' + base + 'signup-user', () => {
+    const url = base + 'signup-user';
+    let participantSpyFind;
+    let participantSpyCreate;
+    let managerSpy;
+
+    const fakeUser = {
+        name: 'ciao',
+        surname: 'ciao',
+        username: 'ciao',
+        birthDate: { year: 1, month: 1, day: 1 },
+        password: 'ciao',
+    };
+
+    beforeAll(() => {
+        participantSpyFind = jest
+            .spyOn(Participant, 'findOne')
+            .mockImplementation(({ email, username }) => {
+                if (email === 'ciaociao@ciao.it') return { email };
+                if (username === 'ciaociao') return { username };
+                return;
+            });
+        participantSpyCreate = jest
+            .spyOn(Participant, 'create')
+            .mockImplementation((params) => ({
+                ...params,
+                _id: '1000',
+            }));
+        managerSpy = jest
+            .spyOn(Manager, 'findOne')
+            .mockImplementation(({ email }) => {
+                if (email === 'ciao@ciao.it') return { email };
+                return;
+            });
+    });
+
+    afterAll(() => {
+        participantSpyFind.mockRestore();
+        participantSpyCreate.mockRestore();
+        managerSpy.mockRestore();
+    });
+
+    test('POST ' + url + ' right request', () => {
+        request(app)
+            .post(url)
+            .send({
+                ...fakeUser,
+                email: 'ciao@ciao.com',
+            })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(true);
+                expect(res.body.message).toBe('User correctly signed up');
+                expect(res.body.id).toBe('1000');
+            });
+    });
+
+    test('POST ' + url + ' manager already with the same email', () => {
+        request(app)
+            .post(url)
+            .send({ ...fakeUser, email: 'ciao@ciao.it' })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Email already used');
+            });
+    });
+
+    test('POST ' + url + ' participant already with the same email', () => {
+        request(app)
+            .post(url)
+            .send({ ...fakeUser, email: 'ciaociao@ciao.it' })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Email already used');
+            });
+    });
+
+    test('POST ' + url + ' participant already with the same username', () => {
+        request(app)
+            .post(url)
+            .send({ ...fakeUser, username: 'ciaociao' })
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.success).toBe(false);
+                expect(res.body.message).toBe('Username already used');
             });
     });
 });

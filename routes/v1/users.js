@@ -376,13 +376,7 @@ router.post(
             res.status(200).json({
                 success: true,
                 message: 'User correctly signed up',
-                participant: {
-                    name: result.name,
-                    surname: result.surname,
-                    username: result.username,
-                    email: result.email,
-                    birthDate: result.birthDate,
-                },
+                id: result._id,
             });
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });

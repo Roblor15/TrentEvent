@@ -213,7 +213,6 @@ describe('POST /v1/events', () => {
             .auth(validToken, { type: 'bearer' })
             .expect(200)
             .expect((res) => {
-                console.log(res.body);
                 expect(res.body.success).toBe(true);
                 expect(res.body.eventId).toBe('10000');
             });
