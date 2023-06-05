@@ -762,4 +762,38 @@ router.get('/manager', check('Manager'), async function (req, res) {
     }
 });
 
+router.get('/valid-token', function (req, res) {
+    let token;
+    const authHeader = req.headers['authorization'];
+
+    if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.substring(7, authHeader.length);
+    } else {
+        return res
+            .status(400)
+            .json({ success: false, message: 'Authorization token not found' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        if (decoded.id && decoded.type) {
+            res.status(200).json({
+                success: true,
+                message: 'Your token is valid',
+            });
+        } else {
+            res.status(200).json({
+                success: false,
+                message: 'Your token is not valid',
+            });
+        }
+    } catch (e) {
+        res.status(200).json({
+            success: false,
+            message: 'Your token is not valid',
+        });
+    }
+});
+
 module.exports = router;
