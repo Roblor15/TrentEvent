@@ -60,7 +60,19 @@ const { diffInYears } = require('../../lib/general');
  */
 router.get('/', async function (_req, res) {
     try {
-        const events = await Event.find({ initDate: { $gt: new Date() } });
+        const events = (
+            await Event.find({ initDate: { $gt: new Date() } }).populate(
+                'manager'
+            )
+        ).map((e) => ({
+            ...e._doc,
+            manager: e.manager._id,
+            address: e.manager.address,
+            _v: undefined,
+            participantsList: undefined,
+            participants: e.participantsList.length,
+        }));
+
         res.status(200).json({
             success: true,
             message: 'Here is the list of events',
@@ -121,12 +133,13 @@ router.post(
     checkProperties(['initDate', 'endDate', 'name', 'description']),
     async function (req, res) {
         try {
-            const { id } = req.user.id;
+            const { id } = req.user;
             const manager = await Manager.findById(id);
             // create the event
             const result = await Event.create({
                 // requests all the attributes of the body
                 ...req.body,
+                manager: id,
                 photos: manager.photos.map((p) => p._id),
             });
             res.status(200).json({
@@ -325,6 +338,12 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
         const event = await Event.findById(req.params.id);
 
         if (event) {
+            if (event.manager !== req.user.id) {
+                return res.status(200).json({
+                    success: false,
+                    message: "You can't modify this event",
+                });
+            }
             event.initDate = req.body.initDate;
             event.endDate = req.body.endDate;
             event.date = req.body.date;
@@ -333,7 +352,7 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
             event.description = req.body.description;
             event.categories = req.body.categories;
 
-            await event.update();
+            await event.save();
 
             return res.status(200).json({
                 success: true,
@@ -407,7 +426,7 @@ router.delete('/:id', check('Manager'), async function (req, res) {
         } else {
             return res.status(200).json({
                 success: false,
-                message: "you can't delete this event",
+                message: "You can't delete this event",
             });
         }
     } catch (e) {

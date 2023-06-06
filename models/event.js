@@ -39,8 +39,8 @@ const eventSchema = new Schema({
         maxLength: 300,
     },
     categories: {
-        type: String,
-        enum: ['musica', 'discoteca', `all'aperto`, 'al chiuso'],
+        type: [String],
+        enum: ['musica', 'discoteca', `all'aperto`, 'al chiuso', 'concerto'],
         required: true,
     },
     manager: {

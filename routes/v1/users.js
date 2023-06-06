@@ -41,6 +41,9 @@ const upload = multer({ storage: multer.memoryStorage() });
  *                   sendEmail:
  *                     type: boolean
  *                     description: Decide if the system sends an email for conferming it
+ *                   linkConfermation:
+ *                     type: string
+ *                     description: the link sended via email where the user confirms the email address
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -108,7 +111,7 @@ router.post(
                     to: result.email,
                     subject: 'Conferma Email 🚀',
                     html: `<p>Ciao ${result.localName},</p>
-                   <p>Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a>.<br/>
+                   <p>Per confermare questa email clicca <a href="${req.body.linkConfermation}/${result._id}">qui</a>.<br/>
                     Verrai ricontattato con la rispsta di un supervisore.</p>`,
                     textEncoding: 'base64',
                 }).catch((e) => console.log(e));
@@ -230,7 +233,9 @@ router.put(
                         <p>La tua richiesta per diventare Organizzatore di eventi è stata rifiutata.</p>`;
                 }
 
-                if (req.body.sendEmail === 'true') {
+                await user.save();
+
+                if (req.body.sendEmail === true) {
                     // send the email
                     await sendMail({
                         to: user.email,
@@ -294,6 +299,9 @@ router.put(
  *                  sendEmail:
  *                    type: boolean
  *                    description: decide if send email for confermation
+ *                  linkConfermation:
+ *                    type: string
+ *                    description: the link sended via email where the user confirms the email address
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -367,7 +375,7 @@ router.post(
                     to: result.email,
                     subject: 'Conferma Email 🚀',
                     html: `<p>Ciao ${result.name} ${result.surname},</p>
-                   <p>La tua iscrizione è andata a buon fine. Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a></p>`,
+                   <p>La tua iscrizione è andata a buon fine. Per confermare questa email clicca <a href="${req.body.linkConfermation}/${result._id}">qui</a></p>`,
                     textEncoding: 'base64',
                 }).catch(console.log);
             }
@@ -742,7 +750,7 @@ router.get('/managers/:id', async function (req, res) {
 
 router.get('/manager', check('Manager'), async function (req, res) {
     try {
-        const manager = await Manager.findById(req.params.id);
+        const manager = await Manager.findById(req.user.id);
 
         res.status(200).json({
             success: true,

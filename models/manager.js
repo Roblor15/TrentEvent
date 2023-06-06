@@ -40,7 +40,11 @@ const managerSchema = new Schema({
         required: true,
         _id: false,
     },
-    localType: { type: String, enum: ['Bar', 'Discoteca'], required: [true] },
+    localType: {
+        type: String,
+        enum: ['bar', 'discoteca', 'pub'],
+        required: [true],
+    },
     photos: {
         type: [Schema.Types.ObjectId],
         ref: 'Manager.photos',
