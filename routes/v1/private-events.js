@@ -100,6 +100,7 @@ router.get('/:id', check('Participant'), async function (req, res) {
 router.post('/', check('Participant'), async function (req, res) {
     try {
         const { address } = req.body;
+
         const result = await PrivateEvent.create({
             // requests all the attributes of the body
             ...req.body,
@@ -118,6 +119,7 @@ router.post('/', check('Participant'), async function (req, res) {
             address: result.address,
             price: result.price,
             description: result.description,
+            message: 'event created',
         });
     } catch (e) {
         res.status(501).json({ success: false, message: e.toString() });
@@ -184,7 +186,6 @@ router.put('/:id/invite', check('Participant'), async function (req, res) {
                 message: 'You are not the owner of the event',
             });
         }
-
         for (const user of req.body.invites) {
             let u;
             if (isEmail(user)) {
@@ -196,7 +197,6 @@ router.put('/:id/invite', check('Participant'), async function (req, res) {
                     username: user.username,
                 });
             }
-
             event.participantsList.push({ user: u._id, state: 'Pending' });
         }
 
@@ -261,11 +261,12 @@ router.put('/:id/invite', check('Participant'), async function (req, res) {
 router.put('/:id/responde', check('Participant'), async function (req, res) {
     try {
         const event = await PrivateEvent.findById(req.params.id);
-        const invitation = event.participantsList.findIndex(
-            ({ user }) => user.user === req.user.id
-        );
 
-        if (invitation > 0) {
+        const invitation = event.participantsList.findIndex(({ user }) => {
+            return user == req.user.id;
+        });
+
+        if (invitation >= 0) {
             if (req.body.accept) {
                 event.participantsList[invitation].state = 'Accepted';
             } else {
