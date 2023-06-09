@@ -117,4 +117,23 @@
  *           items:
  *             type: string
  *           description: The category of the event (1 or more categories)
+ *     PrivateEvent:
+ *       type: object
+ *       required: ["initDate", "endDate", "", "description"]
+ *       properties:
+ *         initDate:
+ *           type: string
+ *           format: date-time
+ *           description: The data when the event inits
+ *         endDate:
+ *           type: string
+ *           format: date-time
+ *           description: The data when the event ends
+ *         price:
+ *           type: float
+ *           description: The price of the event (zero for a free event) in euros
+ *           example: 12,50
+ *         description:
+ *           type: string
+ *           description: The description and explanation of the event
  */

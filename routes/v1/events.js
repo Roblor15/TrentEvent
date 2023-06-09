@@ -25,37 +25,18 @@ const { diffInYears } = require('../../lib/general');
  *         content:
  *           application/json:
  *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/Response'
- *                 - type: object
- *                   properties:
- *                     events:
- *                       type: array
- *                       items:
- *                         allOf:
- *                           - $ref: '#/components/schemas/Event'
- *                           - type: object
- *                             properties:
- *                               id:
- *                                 type: string
- *                                 format: uuid
- *                                 description: The id of the event
- *                               manager:
- *                                 type: string
- *                                 format: uuid
- *                                 description: The id of the manager of the event
- *                               photos:
- *                                 type: array
- *                                 description: Photos of the event
- *                                 items:
- *                                   type: string
- *                                   format: binary
- *
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
  *       501:
  *         description: Internal server error.
  *         content:
  *           application/json:
- *            schema:
+ *             schema:
  *               $ref: '#/components/schemas/Response'
  */
 router.get('/', async function (_req, res) {
