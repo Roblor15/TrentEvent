@@ -118,3 +118,4 @@
  *             type: string
  *           description: The category of the event (1 or more categories)
  */
+// TODO schema report and supervisor

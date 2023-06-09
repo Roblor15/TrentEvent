@@ -1,8 +1,8 @@
 const express = require('express');
 
 const Manager = require('../../models/manager');
-/*const Supervisor = require('../../models/supervisor');
-const checkProperties = require('../../lib/check-properties');*/
+const Supervisor = require('../../models/supervisor');
+const checkProperties = require('../../lib/check-properties');
 const { check } = require('../../lib/authorization');
 
 const router = express.Router();

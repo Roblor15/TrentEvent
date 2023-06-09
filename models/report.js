@@ -6,6 +6,7 @@ const reportSchema = new Schema({
     report: {
         type: String,
         maxLength: 300,
+        required: true,
     },
     participant: {
         type: Schema.Types.ObjectId,
