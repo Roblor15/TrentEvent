@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 
 const Manager = require('../../models/manager');
 const Participant = require('../../models/participant');
+const Event = require('../../models/event');
+
 const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
 const checkProperties = require('../../lib/check-properties');
@@ -762,19 +764,26 @@ router.put(
 
 router.get('/managers/:id', async function (req, res) {
     try {
-        const manager = await Manager.findbyId(req.params.id);
+        const manager = await Manager.findById(req.params.id);
 
-        res.status(200).json({
-            success: true,
-            message: 'Manager infos',
-            infos: {
-                localName: manager.localName,
-                email: manager.email,
-                address: manager.address,
-                localType: manager.localType,
-                photos: manager.photos,
-            },
-        });
+        if (manager) {
+            return res.status(200).json({
+                success: true,
+                message: 'Manager infos',
+                infos: {
+                    localName: manager.localName,
+                    email: manager.email,
+                    address: manager.address,
+                    localType: manager.localType,
+                    photos: manager.photos,
+                },
+            });
+        } else {
+            return res.status(200).json({
+                success: false,
+                message: "Manager doesn't exist",
+            });
+        }
     } catch (e) {
         res.status(501).json({ success: false, message: e.toString() });
     }
@@ -893,6 +902,20 @@ router.get('/valid-token', function (req, res) {
             success: false,
             message: 'Your token is not valid',
         });
+    }
+});
+
+router.get('/my-events', check('Manager'), async function (req, res) {
+    try {
+        const events = await Event.find({ manager: req.user.id });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Your events',
+            events,
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
     }
 });
 

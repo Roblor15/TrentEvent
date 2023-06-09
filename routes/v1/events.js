@@ -133,6 +133,47 @@ router.post(
     }
 );
 
+router.get('/:id', check('All'), async function (req, res) {
+    try {
+        const event = await Event.findById(req.params.id).populate('manager');
+
+        if (event) {
+            if (req.user?.type === 'Manager') {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Your event',
+                    event: {
+                        ...event._doc,
+                        manager: event.manager._id,
+                        address: event.manager.address,
+                        _v: undefined,
+                        participants: event.participantsList.length,
+                    },
+                });
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    message: 'The event ' + req.params.id,
+                    event: {
+                        ...event._doc,
+                        manager: event.manager._id,
+                        address: event.manager.address,
+                        _v: undefined,
+                        participantsList: undefined,
+                        participants: event.participantsList.length,
+                    },
+                });
+            }
+        } else {
+            return res
+                .status(200)
+                .json({ success: false, message: "The event doesn't exist" });
+        }
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
 // TODO: pensare se PUT
 /**
  * @swagger
@@ -319,12 +360,14 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
         const event = await Event.findById(req.params.id);
 
         if (event) {
-            if (event.manager !== req.user.id) {
+            if (!event.manager.equals(req.user.id)) {
                 return res.status(200).json({
                     success: false,
                     message: "You can't modify this event",
                 });
             }
+
+            event.name = req.body.name;
             event.initDate = req.body.initDate;
             event.endDate = req.body.endDate;
             event.date = req.body.date;
@@ -387,7 +430,7 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.delete('/:id', check('Manager'), async function (req, res) {
+router.delete('/:id', async function (req, res) {
     try {
         const event = await Event.findById(req.params.id);
         if (!event) {
