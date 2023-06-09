@@ -36,9 +36,11 @@ const privateeventSchema = new Schema({
     description: {
         type: String,
         maxLength: 100,
+        required: true,
     },
     creator: {
         type: Schema.Types.ObjectId,
+        required: true,
         ref: 'Participant',
     },
     participantsList: [

@@ -8,6 +8,35 @@ const { isEmail } = require('../../lib/general');
 
 const router = express.Router();
 
+/**
+ * @swagger
+ * /v1/private-events:
+ *   get:
+ *     description: checking the events you are subscribed to and the events you created
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
 router.get('/', check('Participant'), async function (req, res) {
     try {
         const { id } = req.user;
@@ -23,6 +52,37 @@ router.get('/', check('Participant'), async function (req, res) {
     }
 });
 
+/**
+ * @swagger
+ * /v1/private_events:
+ *   get:
+ *     description: The private event can be seen only by his creator or who is invited
+ *     tags: 
+ *       - PrivateEvent
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
 router.get('/:id', check('Participant'), async function (req, res) {
     try {
         const { id } = req.user;

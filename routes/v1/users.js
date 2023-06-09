@@ -728,6 +728,38 @@ router.put(
     }
 );
 
+/**
+ * @swagger
+ * /v1/users/managers/{managerId}:
+ *   get:
+ *     description: A participant checks a manager's informations
+ *     tags:
+ *       - manager
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+
 router.get('/managers/:id', async function (req, res) {
     try {
         const manager = await Manager.findbyId(req.params.id);
@@ -748,6 +780,37 @@ router.get('/managers/:id', async function (req, res) {
     }
 });
 
+/**
+ * @swagger
+ * /v1/users/manager/:
+ *   get:
+ *     description: A manager checks his informations
+ *     tags:
+ *       - manager
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
 router.get('/manager', check('Manager'), async function (req, res) {
     try {
         const manager = await Manager.findById(req.user.id);
@@ -770,6 +833,35 @@ router.get('/manager', check('Manager'), async function (req, res) {
     }
 });
 
+/**
+ * @swagger
+ * /v1/users/valid-token/:
+ *   get:
+ *     description: Check of the token
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
 router.get('/valid-token', function (req, res) {
     let token;
     const authHeader = req.headers['authorization'];
