@@ -133,47 +133,6 @@ router.post(
     }
 );
 
-router.get('/:id', check('All'), async function (req, res) {
-    try {
-        const event = await Event.findById(req.params.id).populate('manager');
-
-        if (event) {
-            if (req.user?.type === 'Manager') {
-                return res.status(200).json({
-                    success: true,
-                    message: 'Your event',
-                    event: {
-                        ...event._doc,
-                        manager: event.manager._id,
-                        address: event.manager.address,
-                        _v: undefined,
-                        participants: event.participantsList.length,
-                    },
-                });
-            } else {
-                return res.status(200).json({
-                    success: true,
-                    message: 'The event ' + req.params.id,
-                    event: {
-                        ...event._doc,
-                        manager: event.manager._id,
-                        address: event.manager.address,
-                        _v: undefined,
-                        participantsList: undefined,
-                        participants: event.participantsList.length,
-                    },
-                });
-            }
-        } else {
-            return res
-                .status(200)
-                .json({ success: false, message: "The event doesn't exist" });
-        }
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-    }
-});
-
 // TODO: pensare se PUT
 /**
  * @swagger
@@ -221,7 +180,7 @@ router.post('/:id/subscribe', check('Participant'), async function (req, res) {
         const user = await Participant.findById(id);
         const event = await Event.findById(req.params.id);
         // check if the participant is already subscribed
-        if (event.participantsList.find((_id) => _id === id))
+        if (event.participantsList.includes(id))
             return res.status(200).json({
                 success: false,
                 message: 'Participant already subscribed',
@@ -258,6 +217,37 @@ router.post('/:id/subscribe', check('Participant'), async function (req, res) {
     }
 });
 
+router.post(
+    '/:id/unsubscribe',
+    check('Participant'),
+    async function (req, res) {
+        try {
+            const { id } = req.user;
+            const event = await Event.findById(req.params.id);
+            // check if the participant is already subscribed
+            if (event.participantsList.includes(id)) {
+                event.participantsList = event.participantsList.filter(
+                    (_id) => !_id.equals(id)
+                );
+
+                await event.save();
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'You are succesfully unsubscribed',
+                });
+            }
+
+            return res.status(200).json({
+                success: false,
+                message: 'You were not subscribed to this event',
+            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
+        }
+    }
+);
+
 /**
  * @swagger
  * /v1/event/private-area:
@@ -291,14 +281,81 @@ router.get('/subscribed', check('Participant'), async function (req, res) {
     try {
         const { id } = req.user;
 
-        const events = await Event.find({
-            participantsList: { $all: [id] },
-        });
+        const events = (
+            await Event.find({
+                participantsList: { $all: [id] },
+            }).populate('manager')
+        ).map((e) => ({
+            ...e._doc,
+            manager: e.manager._id,
+            address: e.manager.address,
+            _v: undefined,
+            participantsList: undefined,
+            participants: e.participantsList.length,
+        }));
+
         return res.status(200).json({
             success: true,
             message: 'Here are your events',
             events,
         });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
+router.get('/:id', check('All'), async function (req, res) {
+    try {
+        const event = await Event.findById(req.params.id).populate('manager');
+
+        if (event) {
+            if (req.user?.type === 'Manager') {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Your event',
+                    event: {
+                        ...event._doc,
+                        manager: event.manager._id,
+                        address: event.manager.address,
+                        _v: undefined,
+                        participants: event.participantsList.length,
+                    },
+                });
+            } else if (req.user?.type === 'Participant') {
+                return res.status(200).json({
+                    success: true,
+                    message: 'The event ' + req.params.id,
+                    event: {
+                        ...event._doc,
+                        manager: event.manager._id,
+                        address: event.manager.address,
+                        _v: undefined,
+                        participantsList: undefined,
+                        participants: event.participantsList.length,
+                        subscribed: event.participantsList.includes(
+                            req.user.id
+                        ),
+                    },
+                });
+            } else {
+                return res.status(200).json({
+                    success: true,
+                    message: 'The event ' + req.params.id,
+                    event: {
+                        ...event._doc,
+                        manager: event.manager._id,
+                        address: event.manager.address,
+                        _v: undefined,
+                        participantsList: undefined,
+                        participants: event.participantsList.length,
+                    },
+                });
+            }
+        } else {
+            return res
+                .status(200)
+                .json({ success: false, message: "The event doesn't exist" });
+        }
     } catch (e) {
         res.status(501).json({ success: false, message: e.toString() });
     }
@@ -430,7 +487,7 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.delete('/:id', async function (req, res) {
+router.delete('/:id', check('Manager'), async function (req, res) {
     try {
         const event = await Event.findById(req.params.id);
         if (!event) {
@@ -439,13 +496,13 @@ router.delete('/:id', async function (req, res) {
                 message: "The event doesn't exist",
             });
         }
-        if (event.manager === req.user.id) {
+        if (event.manager.equals(req.user.id)) {
             await Event.deleteOne({
                 _id: req.params.id,
             });
             return res.status(200).json({
                 success: true,
-                message: 'Your has been cancelled',
+                message: 'Your event has been cancelled',
             });
         } else {
             return res.status(200).json({

@@ -675,11 +675,14 @@ router.post(
  *         application/json:
  *           schema:
  *             type: object
- *             required: ["password"]
+ *             required: ["oldPassword", "newPassword"]
  *             properties:
- *               password:
+ *               oldPassword:
  *                 type: string
- *                 description: The google token.
+ *                 description: The old password
+ *               newPassword:
+ *                 type: string
+ *                 describe: The new password
  *
  *     responses:
  *       200:
@@ -709,21 +712,36 @@ router.post(
  */
 router.put(
     '/password',
-    check('Participant'),
-    checkProperties(['password']),
+    check(['Participant', 'Manager']),
+    checkProperties(['newPassword', 'oldPassword']),
     async function (req, res) {
         try {
-            // find user in database
-            const user = await Participant.findById(req.user.id);
-            user.password = req.body.password;
+            let user;
+            const { newPassword, oldPassword } = req.body;
 
-            //save the user updates
-            await user.save();
+            if (req.user.type === 'Participant') {
+                // find user in database
+                user = await Participant.findById(req.user.id);
+            } else if (req.user.type === 'Manager') {
+                user = await Manager.findById(req.user.id);
+            }
 
-            res.status(200).json({
-                success: true,
-                message: 'Password changed',
-            });
+            if (await user.verifyPassword(oldPassword)) {
+                user.password = newPassword;
+
+                //save the user updates
+                await user.save();
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'Password changed',
+                });
+            } else {
+                return res.status(200).json({
+                    success: false,
+                    message: 'Old password is wrong',
+                });
+            }
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
         }
@@ -842,6 +860,40 @@ router.get('/manager', check('Manager'), async function (req, res) {
     }
 });
 
+router.get('/managers/:id/events', async function (req, res) {
+    try {
+        const manager = await Manager.findById(req.params.id);
+
+        if (manager) {
+            const events = (
+                await Event.find({
+                    manager: req.params.id,
+                })
+            ).map((e) => ({
+                ...e._doc,
+                manager: e.manager._id,
+                address: e.manager.address,
+                _v: undefined,
+                participantsList: undefined,
+                participants: e.participantsList.length,
+            }));
+
+            return res.status(200).json({
+                success: true,
+                message: 'Manager infos',
+                events,
+            });
+        } else {
+            return res.status(200).json({
+                success: false,
+                message: "Manager doesn't exist",
+            });
+        }
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
 /**
  * @swagger
  * /v1/users/valid-token/:
@@ -913,6 +965,24 @@ router.get('/my-events', check('Manager'), async function (req, res) {
             success: true,
             message: 'Your events',
             events,
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
+router.get('/my-infos', check('Participant'), async function (req, res) {
+    try {
+        const user = await Participant.findById(req.user.id);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Your infos',
+            infos: {
+                ...user._doc,
+                password: undefined,
+                idExteralApi: undefined,
+            },
         });
     } catch (e) {
         res.status(501).json({ success: false, message: e.toString() });
