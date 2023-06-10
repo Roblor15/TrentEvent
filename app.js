@@ -9,6 +9,7 @@ const cors = require('cors');
 require('dotenv').config();
 
 const usersRouter = require('./routes/v1/users');
+const managerRouter = require('./routes/v1/managers');
 const eventRouter = require('./routes/v1/events');
 const privateEventRouter = require('./routes/v1/private-events');
 
@@ -43,6 +44,8 @@ app.use('/api-docs/v1', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 
 // serve apis for users
 app.use('/v1/users', usersRouter);
+// serve apis for managers
+app.use('/v1/managers', managerRouter);
 // serve apis for events
 app.use('/v1/events', eventRouter);
 // serve apis for private-events

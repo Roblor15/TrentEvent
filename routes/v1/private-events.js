@@ -502,7 +502,7 @@ router.put(
                 // event.photos = req.body.photos; TODO
                 event.description = req.body.description;
 
-                await event.update();
+                await event.save();
 
                 return res.status(200).json({
                     success: true,

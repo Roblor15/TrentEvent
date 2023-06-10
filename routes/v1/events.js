@@ -1,5 +1,3 @@
-// TODO: cosa restiturire dalle api
-
 const express = require('express');
 
 const router = express.Router();
@@ -182,7 +180,6 @@ router.post(
     }
 );
 
-// TODO: pensare se PUT
 /**
  * @swagger
  * /v1/events/{id}/subscribe:
@@ -250,7 +247,6 @@ router.put('/:id/subscribe', check('Participant'), async function (req, res) {
             });
 
         // TODO: if (event.cost != 0), indirizza al pagamento
-        // TODO: cambiare save in update
 
         // subscribe user to event
         event.participantsList.push(id);
@@ -594,7 +590,7 @@ module.exports = router;
 
 /**
  * @swagger
- * /v1/users/{id}:
+ * /v1/events/{id}:
  *   put:
  *     description: Modify your events
  *     tags:
@@ -677,7 +673,7 @@ router.put('/:id', check('Manager'), async function (req, res) {
 
 /**
  * @swagger
- * /v1/users/{id}:
+ * /v1/events/{id}:
  *   delete:
  *     description: Delete your events
  *     tags:
