@@ -43,6 +43,7 @@ const upload = multer({ storage: multer.memoryStorage() });
  *                   sendEmail:
  *                     type: boolean
  *                     description: Decide if the system sends an email for conferming it
+ *                     default: false
  *                   linkConfermation:
  *                     type: string
  *                     description: the link sended via email where the user confirms the email address
@@ -56,8 +57,10 @@ const upload = multer({ storage: multer.memoryStorage() });
  *                 - $ref: '#/components/schemas/Response'
  *                 - type: object
  *                   properties:
- *                     manager:
- *                       $ref: '#/components/schemas/Manager'
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: Id of the created manager
  *       400:
  *         description: Malformed request.
  *         content:
@@ -123,12 +126,7 @@ router.post(
             res.status(200).json({
                 success: true,
                 message: "Manager's request accepted",
-                manager: {
-                    localName: result.localName,
-                    email: result.email,
-                    address: result.address,
-                    localType: result.localType,
-                },
+                id: result._id.toString(),
             });
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
@@ -175,8 +173,10 @@ router.post(
  *                 - $ref: '#/components/schemas/Response'
  *                 - type: object
  *                   properties:
- *                     manager:
- *                       $ref: '#/components/schemas/Manager'
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: Id of the approved manager
  *       400:
  *         description: Malformed request.
  *         content:
@@ -251,24 +251,13 @@ router.put(
                 res.status(200).json({
                     success: true,
                     message: "Manager's request updated",
-                    manager: {
-                        localName: user.localName,
-                        email: user.email,
-                        address: user.address,
-                        localType: user.localType,
-                    },
+                    id: user._id.toString(),
                 });
             } else {
                 // response with main fields of manager
                 res.status(200).json({
                     success: false,
                     message: "Manager's email is not confermed",
-                    manager: {
-                        localName: user.localName,
-                        email: user.email,
-                        address: user.address,
-                        localType: user.localType,
-                    },
                 });
             }
         } catch (e) {
@@ -314,8 +303,9 @@ router.put(
  *                 - $ref: '#/components/schemas/Response'
  *                 - type: object
  *                   properties:
- *                     participant:
- *                       $ref: '#/components/schemas/Participant'
+ *                     id:
+ *                       type: string
+ *                       format: uuid
  *       400:
  *         description: Malformed request.
  *         content:
@@ -386,7 +376,7 @@ router.post(
             res.status(200).json({
                 success: true,
                 message: 'User correctly signed up',
-                id: result._id,
+                id: result._id.toString(),
             });
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
@@ -750,171 +740,17 @@ router.put(
 
 /**
  * @swagger
- * /v1/users/managers/{managerId}:
- *   get:
- *     description: A participant checks a manager's informations
- *     tags:
- *       - manager
- *     security:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- *     responses:
- *       200:
- *         description: Request succesfully processed.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Response'
- *       401:
- *         description: Not Authorized.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
- *       501:
- *         description: Internal server error.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Response'
- */
-
-router.get('/managers/:id', async function (req, res) {
-    try {
-        const manager = await Manager.findById(req.params.id);
-
-        if (manager) {
-            return res.status(200).json({
-                success: true,
-                message: 'Manager infos',
-                infos: {
-                    localName: manager.localName,
-                    email: manager.email,
-                    address: manager.address,
-                    localType: manager.localType,
-                    photos: manager.photos,
-                },
-            });
-        } else {
-            return res.status(200).json({
-                success: false,
-                message: "Manager doesn't exist",
-            });
-        }
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-    }
-});
-
-/**
- * @swagger
- * /v1/users/manager/:
- *   get:
- *     description: A manager checks his informations
- *     tags:
- *       - manager
- *     security:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- *     responses:
- *       200:
- *         description: Request succesfully processed.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Response'
- *       401:
- *         description: Not Authorized.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
- *       501:
- *         description: Internal server error.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Response'
- */
-router.get('/manager', check('Manager'), async function (req, res) {
-    try {
-        const manager = await Manager.findById(req.user.id);
-
-        res.status(200).json({
-            success: true,
-            message: 'Your infos',
-            infos: {
-                localName: manager.localName,
-                email: manager.email,
-                verifiedEmail: manager.verifiedEmail,
-                address: manager.address,
-                localType: manager.localType,
-                photos: manager.photos,
-                approvation: manager.approvation,
-            },
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-    }
-});
-
-router.get('/managers/:id/events', async function (req, res) {
-    try {
-        const manager = await Manager.findById(req.params.id);
-
-        if (manager) {
-            const events = (
-                await Event.find({
-                    manager: req.params.id,
-                })
-            ).map((e) => ({
-                ...e._doc,
-                manager: e.manager._id,
-                address: e.manager.address,
-                _v: undefined,
-                participantsList: undefined,
-                participants: e.participantsList.length,
-            }));
-
-            return res.status(200).json({
-                success: true,
-                message: 'Manager infos',
-                events,
-            });
-        } else {
-            return res.status(200).json({
-                success: false,
-                message: "Manager doesn't exist",
-            });
-        }
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-    }
-});
-
-/**
- * @swagger
  * /v1/users/valid-token/:
  *   get:
- *     description: Check of the token
- *     security:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
+ *     description: Check if the token is valid
+ *     tags:
+ *       - users
  *     responses:
  *       200:
  *         description: Request succesfully processed.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Response'
- *       401:
- *         description: Not Authorized.
- *         content:
- *           application/json:
- *            schema:
  *               $ref: '#/components/schemas/Response'
  *       501:
  *         description: Internal server error.
@@ -957,20 +793,49 @@ router.get('/valid-token', function (req, res) {
     }
 });
 
-router.get('/my-events', check('Manager'), async function (req, res) {
-    try {
-        const events = await Event.find({ manager: req.user.id });
-
-        return res.status(200).json({
-            success: true,
-            message: 'Your events',
-            events,
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-    }
-});
-
+/**
+ * @swagger
+ * /v1/users/my-infos:
+ *   get:
+ *     description: A manager get his events
+ *     tags:
+ *       - users
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     infos:
+ *                       type: object
+ *                       allOf:
+ *                         - $ref: '#/components/schemas/Participant'
+ *                         - type: object
+ *                           properties:
+ *                             verifiedEmail:
+ *                               type: boolean
+ *                               description: If the email is verified or not
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
 router.get('/my-infos', check('Participant'), async function (req, res) {
     try {
         const user = await Participant.findById(req.user.id);

@@ -27,12 +27,6 @@ const privateeventSchema = new Schema({
         default: 0,
         min: 0,
     },
-    photos: [
-        {
-            data: Buffer,
-            contentType: String,
-        },
-    ],
     description: {
         type: String,
         maxLength: 100,

@@ -5,6 +5,7 @@ const Participant = require('../../models/participant');
 
 const { check } = require('../../lib/authorization');
 const { isEmail } = require('../../lib/general');
+const checkProperties = require('../../lib/check-properties');
 
 const router = express.Router();
 
@@ -13,6 +14,8 @@ const router = express.Router();
  * /v1/private-events:
  *   get:
  *     description: checking the events you are subscribed to and the events you created
+ *     tags:
+ *       - private-events
  *     security:
  *       type: http
  *       scheme: bearer
@@ -23,7 +26,46 @@ const router = express.Router();
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Response'
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     myEvents:
+ *                       type: array
+ *                       description: Events I created
+ *                       items:
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/PrivateEvent'
+ *                           - type: object
+ *                             properties:
+ *                               creator:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 description: The creator of the event
+ *                               participantsList:
+ *                                 type: array
+ *                                 description: The list of participants
+ *                                 items:
+ *                                   type: string
+ *                                   format: uuid
+ *                     events:
+ *                       type: array
+ *                       description: Events where I'm invited
+ *                       items:
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/PrivateEvent'
+ *                           - type: object
+ *                             properties:
+ *                               creator:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 description: The creator of the event
+ *                               participantsList:
+ *                                 type: array
+ *                                 description: The list of participants
+ *                                 items:
+ *                                   type: string
+ *                                   format: uuid
  *       401:
  *         description: Not Authorized.
  *         content:
@@ -54,11 +96,11 @@ router.get('/', check('Participant'), async function (req, res) {
 
 /**
  * @swagger
- * /v1/private_events:
+ * /v1/private-events:
  *   get:
  *     description: The private event can be seen only by his creator or who is invited
- *     tags: 
- *       - PrivateEvent
+ *     tags:
+ *       - private-events
  *     security:
  *       type: http
  *       scheme: bearer
@@ -69,7 +111,26 @@ router.get('/', check('Participant'), async function (req, res) {
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Response'
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     event:
+ *                       type: object
+ *                       allOf:
+ *                         - $ref: '#/components/schemas/PrivateEvent'
+ *                         - type: object
+ *                           properties:
+ *                             creator:
+ *                               type: string
+ *                               format: uuid
+ *                               description: The creator of the event
+ *                             participantsList:
+ *                               type: array
+ *                               description: The list of participants
+ *                               items:
+ *                                 type: string
+ *                                 format: uuid
  *       401:
  *         description: Not Authorized.
  *         content:
@@ -90,8 +151,8 @@ router.get('/:id', check('Participant'), async function (req, res) {
         const event = await PrivateEvent.findById(req.params.id);
 
         if (
-            event.creator !== id ||
-            !event.participantsList.find(({ user }) => user._id === id)
+            !event.creator.equals(id) ||
+            !event.participantsList.find(({ user }) => user._id.equals(id))
         ) {
             res.status(200).json({
                 status: false,
@@ -99,7 +160,11 @@ router.get('/:id', check('Participant'), async function (req, res) {
             });
         }
 
-        res.status(200).json({ success: true, message: '', event });
+        res.status(200).json({
+            success: true,
+            message: 'Here the event',
+            event,
+        });
     } catch (e) {
         res.status(501).json({ success: false, message: e.toString() });
     }
@@ -121,23 +186,21 @@ router.get('/:id', check('Participant'), async function (req, res) {
  *     content:
  *       application/json:
  *         schema:
- *           allOf:
- *             - $ref: '#/components/schemas/PrivateEvent'
- *             - type: object
- *               properties:
- *                 photos:
- *                   type: array
- *                   description: Photos of the local.
- *                   items:
- *                     type: string
- *                     format: binary
+ *           $ref: '#/components/schemas/PrivateEvent'
  *     responses:
  *       200:
  *         description: Request succesfully processed.
  *         content:
  *           application/json:
  *            schema:
- *               $ref: '#/components/schemas/Response'
+ *              allOf:
+ *                - $ref: '#/components/schemas/Response'
+ *                - type: object
+ *                  properties:
+ *                    id:
+ *                      type: string
+ *                      format: uuid
+ *                      description: The event id
  *       400:
  *         description: Malformed request.
  *         content:
@@ -157,37 +220,32 @@ router.get('/:id', check('Participant'), async function (req, res) {
  *            schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/', check('Participant'), async function (req, res) {
-    try {
-        const { address } = req.body;
-        const result = await PrivateEvent.create({
-            // requests all the attributes of the body
-            ...req.body,
-            address: JSON.parse(address),
-            photos: req.files
-                // filter images
-                ?.filter((p) => p.mimetype.startsWith('image'))
-                .map((p) => ({
-                    data: p.buffer,
-                    contentType: p.mimetype,
-                })),
-        });
-        res.status(200).json({
-            initDate: result.initDate,
-            endDate: result.endDate,
-            address: result.address,
-            price: result.price,
-            description: result.description,
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
+router.post(
+    '/',
+    check('Participant'),
+    checkProperties(['initDate', 'endDate', 'description']),
+    async function (req, res) {
+        try {
+            const result = await PrivateEvent.create({
+                // get all the attributes of the body
+                ...req.body,
+            });
+
+            res.status(200).json({
+                success: true,
+                message: 'Event created',
+                id: result._id.toString(),
+            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
+        }
     }
-});
+);
 
 /**
  * @swagger
  * /v1/private-events/{id}/invite:
- *   post:
+ *   put:
  *     description: Invites user to private event
  *     tags:
  *       - private-events
@@ -209,9 +267,11 @@ router.post('/', check('Participant'), async function (req, res) {
  *         application/json:
  *           schema:
  *             type: object
+ *             required: ["users"]
  *             properties:
  *               users:
  *                 type: array
+ *                 description: Array of usernames or emails of users
  *                 items:
  *                   type: string
  *     responses:
@@ -220,6 +280,12 @@ router.post('/', check('Participant'), async function (req, res) {
  *         content:
  *           application/json:
  *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
  *               $ref: '#/components/schemas/Response'
  *       401:
  *         description: Not Authorized.
@@ -234,47 +300,52 @@ router.post('/', check('Participant'), async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.put('/:id/invite', check('Participant'), async function (req, res) {
-    try {
-        const event = await PrivateEvent.findById(req.params.id);
+router.put(
+    '/:id/invite',
+    check('Participant'),
+    checkProperties(['users']),
+    async function (req, res) {
+        try {
+            const event = await PrivateEvent.findById(req.params.id);
 
-        if (event.creator !== req.user.id) {
-            return res.status(200).json({
-                success: false,
-                message: 'You are not the owner of the event',
-            });
-        }
-
-        for (const user of req.body.invites) {
-            let u;
-            if (isEmail(user)) {
-                u = await Participant.findOne({
-                    email: user.email,
-                });
-            } else {
-                u = await Participant.findOne({
-                    username: user.username,
+            if (!event.creator.equals(req.user.id)) {
+                return res.status(200).json({
+                    success: false,
+                    message: 'You are not the owner of the event',
                 });
             }
 
-            event.participantsList.push({ user: u._id, state: 'Pending' });
+            for (const user of req.body.invites) {
+                let u;
+                if (isEmail(user)) {
+                    u = await Participant.findOne({
+                        email: user.email,
+                    });
+                } else {
+                    u = await Participant.findOne({
+                        username: user.username,
+                    });
+                }
+
+                event.participantsList.push({ user: u._id, state: 'Pending' });
+            }
+
+            await event.save();
+
+            res.status(200).json({
+                success: true,
+                message: 'Your invitations have been sent',
+            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
         }
-
-        await event.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Your invitations have been sent',
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
     }
-});
+);
 
 /**
  * @swagger
  * /v1/private-events/{id}/responde:
- *   post:
+ *   put:
  *     description: Accept or deny an invitation to a private event
  *     tags:
  *       - private-events
@@ -296,14 +367,23 @@ router.put('/:id/invite', check('Participant'), async function (req, res) {
  *         application/json:
  *           schema:
  *             type: object
+ *             required: ['accept']
  *             properties:
- *               accept: boolean
+ *               accept:
+ *                 type: boolean
+ *                 description: Accept or Deny the invite
  *     responses:
  *       200:
  *         description: Request succesfully processed.
  *         content:
  *           application/json:
  *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
  *               $ref: '#/components/schemas/Response'
  *       401:
  *         description: Not Authorized.
@@ -318,52 +398,63 @@ router.put('/:id/invite', check('Participant'), async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.put('/:id/responde', check('Participant'), async function (req, res) {
-    try {
-        const event = await PrivateEvent.findById(req.params.id);
-        const invitation = event.participantsList.findIndex(
-            ({ user }) => user.user === req.user.id
-        );
+router.put(
+    '/:id/responde',
+    check('Participant'),
+    checkProperties(['accept']),
+    async function (req, res) {
+        try {
+            const event = await PrivateEvent.findById(req.params.id);
+            const invitation = event.participantsList.findIndex(
+                ({ user }) => user.user === req.user.id
+            );
 
-        if (invitation > 0) {
-            if (req.body.accept) {
-                event.participantsList[invitation].state = 'Accepted';
+            if (invitation > 0) {
+                if (req.body.accept) {
+                    event.participantsList[invitation].state = 'Accepted';
+                } else {
+                    event.participantsList[invitation].state = 'Denied';
+                }
+
+                return res
+                    .status(200)
+                    .json({ success: true, message: 'Your response is saved' });
             } else {
-                event.participantsList[invitation].state = 'Denied';
+                res.status(200).json({
+                    success: false,
+                    message: 'You have not been invited',
+                });
             }
-
-            return res
-                .status(200)
-                .json({ success: true, message: 'Your response is saved' });
-        } else {
-            res.status(200).json({
-                success: false,
-                message: 'You have not been invited',
-            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
         }
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
     }
-});
+);
 
 /**
  * @swagger
- * /v1/users/modify-private-events:
+ * /v1/private-events/{id}:
  *   put:
  *     description: Modify your private events
  *     tags:
- *       - PrivateEvent
+ *       - private-events
  *     security:
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Id of the event
  *     requestBody:
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: ["initDate", "endDate", "address", "price", "photos", "description"]
- *
+ *             $ref: '#/components/schemas/PrivateEvent'
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -395,10 +486,10 @@ router.put('/:id/responde', check('Participant'), async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-
 router.put(
-    '/:id/modify-private-event',
+    '/:id',
     check('Participant'),
+    checkProperties(['initDate', 'endDate', 'description']),
     async function (req, res) {
         try {
             const event = await PrivateEvent.findById(req.params.id);
@@ -431,21 +522,23 @@ router.put(
 
 /**
  * @swagger
- * /v1/users/delete-private-events:
+ * /v1/private-events/{id}:
  *   delete:
  *     description: Delete your private events
  *     tags:
- *       - Event
+ *       - private-events
  *     security:
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Id of the event
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -469,13 +562,14 @@ router.put(
 router.delete('/:id', check('Participant'), async function (req, res) {
     try {
         const event = await PrivateEvent.findById(req.params.id);
+
         if (!event) {
             return res.status(200).json({
                 success: false,
                 message: "The event doesn't exist",
             });
         }
-        if (event.creator === req.user.id) {
+        if (event.creator.equals(req.user.id)) {
             await PrivateEvent.deleteOne({
                 _id: req.params.id,
             });

@@ -114,12 +114,12 @@
  *           description: The description and explanation of the event
  *         categories:
  *           type: array
+ *           description: The category of the event (1 or more categories)
  *           items:
  *             type: string
- *           description: The category of the event (1 or more categories)
  *     PrivateEvent:
  *       type: object
- *       required: ["initDate", "endDate", "", "description"]
+ *       required: ["initDate", "endDate", "description"]
  *       properties:
  *         initDate:
  *           type: string
@@ -136,4 +136,28 @@
  *         description:
  *           type: string
  *           description: The description and explanation of the event
+ *         address:
+ *           type: object
+ *           description: The address of the local.
+ *           properties:
+ *             country:
+ *               type: string
+ *               description: The country where the local is.
+ *               example: Italy
+ *             city:
+ *               type: string
+ *               description: The city where the local is.
+ *               example: Trento
+ *             street:
+ *               type: string
+ *               description: The street where the local is.
+ *               example: corso tre novembre
+ *             number:
+ *               type: integer
+ *               description: The house number of the local.
+ *               example: 15
+ *             cap:
+ *               type: string
+ *               description: The cap of the city.
+ *               example: 38122
  */

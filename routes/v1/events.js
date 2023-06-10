@@ -25,13 +25,55 @@ const { diffInYears } = require('../../lib/general');
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Response'
- *       401:
- *         description: Not Authorized.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/Event'
+ *                           - type: object
+ *                             properties:
+ *                               manager:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 description: The creator of the event
+ *                               participants:
+ *                                 type: number
+ *                                 description: Number of participants
+ *                               address:
+ *                                 type: object
+ *                                 description: The address of the local.
+ *                                 properties:
+ *                                   country:
+ *                                     type: string
+ *                                     description: The country where the local is.
+ *                                     example: Italy
+ *                                   city:
+ *                                     type: string
+ *                                     description: The city where the local is.
+ *                                     example: Trento
+ *                                   street:
+ *                                     type: string
+ *                                     description: The street where the local is.
+ *                                     example: corso tre novembre
+ *                                   number:
+ *                                     type: integer
+ *                                     description: The house number of the local.
+ *                                     example: 15
+ *                                   cap:
+ *                                     type: string
+ *                                     description: The cap of the city.
+ *                                     example: 38122
+ *                               photos:
+ *                                 type: array
+ *                                 description: Array Id of manager's photos
+ *                                 items:
+ *                                   type: string
+ *                                   format: uuid
  *       501:
  *         description: Internal server error.
  *         content:
@@ -87,8 +129,15 @@ router.get('/', async function (_req, res) {
  *         description: Request succesfully processed.
  *         content:
  *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: Id of the created event
  *       400:
  *         description: Malformed request.
  *         content:
@@ -137,8 +186,7 @@ router.post(
 /**
  * @swagger
  * /v1/events/{id}/subscribe:
- *   post:
- *     summary: A manager creates an event
+ *   put:
  *     description: A participant subscribes to an event
  *     tags:
  *       - events
@@ -174,7 +222,7 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/:id/subscribe', check('Participant'), async function (req, res) {
+router.put('/:id/subscribe', check('Participant'), async function (req, res) {
     try {
         const { id } = req.user;
         const user = await Participant.findById(id);
@@ -217,42 +265,80 @@ router.post('/:id/subscribe', check('Participant'), async function (req, res) {
     }
 });
 
-router.post(
-    '/:id/unsubscribe',
-    check('Participant'),
-    async function (req, res) {
-        try {
-            const { id } = req.user;
-            const event = await Event.findById(req.params.id);
-            // check if the participant is already subscribed
-            if (event.participantsList.includes(id)) {
-                event.participantsList = event.participantsList.filter(
-                    (_id) => !_id.equals(id)
-                );
+/**
+ * @swagger
+ * /v1/events/{id}/unsubscribe:
+ *   put:
+ *     description: A participant unsubscribes to an event
+ *     tags:
+ *       - events
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Id of the event
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.put('/:id/unsubscribe', check('Participant'), async function (req, res) {
+    try {
+        const { id } = req.user;
+        const event = await Event.findById(req.params.id);
 
-                await event.save();
+        // check if the participant is already subscribed
+        if (event.participantsList.includes(id)) {
+            event.participantsList = event.participantsList.filter(
+                (_id) => !_id.equals(id)
+            );
 
-                return res.status(200).json({
-                    success: true,
-                    message: 'You are succesfully unsubscribed',
-                });
-            }
+            await event.save();
 
             return res.status(200).json({
-                success: false,
-                message: 'You were not subscribed to this event',
+                success: true,
+                message: 'You are succesfully unsubscribed',
             });
-        } catch (e) {
-            res.status(501).json({ success: false, message: e.toString() });
         }
+
+        return res.status(200).json({
+            success: false,
+            message: 'You were not subscribed to this event',
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
     }
-);
+});
 
 /**
  * @swagger
- * /v1/event/private-area:
+ * /v1/events/subscribed:
  *   get:
  *     description: Checking your subscriptions.
+ *     tags:
+ *       - events
  *     security:
  *       type: http
  *       scheme: bearer
@@ -263,7 +349,55 @@ router.post(
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Response'
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/Event'
+ *                           - type: object
+ *                             properties:
+ *                               manager:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 description: The creator of the event
+ *                               participants:
+ *                                 type: number
+ *                                 description: Number of participants
+ *                               address:
+ *                                 type: object
+ *                                 description: The address of the local.
+ *                                 properties:
+ *                                   country:
+ *                                     type: string
+ *                                     description: The country where the local is.
+ *                                     example: Italy
+ *                                   city:
+ *                                     type: string
+ *                                     description: The city where the local is.
+ *                                     example: Trento
+ *                                   street:
+ *                                     type: string
+ *                                     description: The street where the local is.
+ *                                     example: corso tre novembre
+ *                                   number:
+ *                                     type: integer
+ *                                     description: The house number of the local.
+ *                                     example: 15
+ *                                   cap:
+ *                                     type: string
+ *                                     description: The cap of the city.
+ *                                     example: 38122
+ *                               photos:
+ *                                 type: array
+ *                                 description: Array Id of manager's photos
+ *                                 items:
+ *                                   type: string
+ *                                   format: uuid
  *       401:
  *         description: Not Authorized.
  *         content:
@@ -303,7 +437,102 @@ router.get('/subscribed', check('Participant'), async function (req, res) {
         res.status(501).json({ success: false, message: e.toString() });
     }
 });
-
+/**
+ * @swagger
+ * /v1/events/{id}:
+ *   get:
+ *     description: Checking your subscriptions.
+ *     tags:
+ *       - events
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Id of the event
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     events:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/Event'
+ *                           - type: object
+ *                             properties:
+ *                               manager:
+ *                                 type: string
+ *                                 format: uuid
+ *                                 description: The creator of the event
+ *                               participants:
+ *                                 type: number
+ *                                 description: Number of participants
+ *                               subscribed:
+ *                                 type: boolean
+ *                                 description: If the participant is subscribed
+ *                               address:
+ *                                 type: object
+ *                                 description: The address of the local.
+ *                                 properties:
+ *                                   country:
+ *                                     type: string
+ *                                     description: The country where the local is.
+ *                                     example: Italy
+ *                                   city:
+ *                                     type: string
+ *                                     description: The city where the local is.
+ *                                     example: Trento
+ *                                   street:
+ *                                     type: string
+ *                                     description: The street where the local is.
+ *                                     example: corso tre novembre
+ *                                   number:
+ *                                     type: integer
+ *                                     description: The house number of the local.
+ *                                     example: 15
+ *                                   cap:
+ *                                     type: string
+ *                                     description: The cap of the city.
+ *                                     example: 38122
+ *                               photos:
+ *                                 type: array
+ *                                 description: Array Id of manager's photos
+ *                                 items:
+ *                                   type: string
+ *                                   format: uuid
+ *                               participantsList:
+ *                                 type: array
+ *                                 description: Id of participants
+ *                                 items:
+ *                                   type: string
+ *                                   format: uuid
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
 router.get('/:id', check('All'), async function (req, res) {
     try {
         const event = await Event.findById(req.params.id).populate('manager');
@@ -365,36 +594,31 @@ module.exports = router;
 
 /**
  * @swagger
- * /v1/users/modify-events:
+ * /v1/users/{id}:
  *   put:
  *     description: Modify your events
  *     tags:
- *       - Event
+ *       - events
  *     security:
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Id of the event
  *     requestBody:
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: ["date", "initDate", "endDate", "limitPeople", "image", "description", "categories"]
- *
+ *             $ref: '#/components/schemas/Event'
  *     responses:
  *       200:
  *         description: Request succesfully processed.
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/Response'
- *                 - type: object
- *                   properties:
- *                     manager:
- *                       $ref: '#/components/schemas/Manager'
- *       400:
- *         description: Malformed request.
  *         content:
  *           application/json:
  *            schema:
@@ -412,7 +636,7 @@ module.exports = router;
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.put('/:id/modify-event', check('Manager'), async function (req, res) {
+router.put('/:id', check('Manager'), async function (req, res) {
     try {
         const event = await Event.findById(req.params.id);
 
@@ -429,6 +653,7 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
             event.endDate = req.body.endDate;
             event.date = req.body.date;
             event.limitPeople = req.body.limitPeople;
+            event.ageLimit = req.body.ageLimit;
             // event.image = req.body.image; TODO
             event.description = req.body.description;
             event.categories = req.body.categories;
@@ -452,21 +677,23 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
 
 /**
  * @swagger
- * /v1/users/delete-events:
+ * /v1/users/{id}:
  *   delete:
  *     description: Delete your events
  *     tags:
- *       - Event
+ *       - events
  *     security:
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Id of the event
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -490,6 +717,7 @@ router.put('/:id/modify-event', check('Manager'), async function (req, res) {
 router.delete('/:id', check('Manager'), async function (req, res) {
     try {
         const event = await Event.findById(req.params.id);
+
         if (!event) {
             return res.status(200).json({
                 success: false,
