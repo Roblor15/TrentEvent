@@ -215,11 +215,15 @@ router.get('/infos', check('Manager'), async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.get('/:id', async function (req, res) {
+router.get('/:id', check('All'), async function (req, res) {
     try {
         const manager = await Manager.findById(req.params.id);
 
         if (manager) {
+            let approvation = undefined;
+            if (req.user?.type === 'Supervisor') {
+                approvation = manager.approvation;
+            }
             return res.status(200).json({
                 success: true,
                 message: 'Manager infos',
@@ -228,6 +232,7 @@ router.get('/:id', async function (req, res) {
                     email: manager.email,
                     address: manager.address,
                     localType: manager.localType,
+                    approvation,
                 },
             });
         } else {
