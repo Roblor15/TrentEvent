@@ -28,12 +28,9 @@ const eventSchema = new Schema({
         default: 0,
         min: 0,
     },
-    photos: [
-        {
-            data: Buffer,
-            contentType: String,
-        },
-    ],
+    photos: {
+        type: [Schema.Types.ObjectId],
+    },
     description: {
         type: String,
         maxLength: 300,

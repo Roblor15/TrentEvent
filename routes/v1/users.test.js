@@ -48,7 +48,7 @@ describe('POST ' + base + 'signup-manager', () => {
             .field('localName', 'ciao')
             .field('email', 'ciao@c.ie')
             .field('address', JSON.stringify(address))
-            .field('localType', 'Bar')
+            .field('localType', 'bar')
             .expect(200)
             .expect((res) => {
                 expect(res.body.success).toBe(true);
@@ -65,10 +65,10 @@ describe('POST ' + base + 'signup-manager', () => {
         };
 
         await Manager.create({
-            localName: 'Bello Bar',
+            localName: 'Bello bar',
             email: 'ciao@hotmail.it',
             address,
-            localType: 'Bar',
+            localType: 'bar',
         });
 
         return request(app)
@@ -76,7 +76,7 @@ describe('POST ' + base + 'signup-manager', () => {
             .field('localName', 'ciao')
             .field('email', 'ciao@hotmail.it')
             .field('address', JSON.stringify(address))
-            .field('localType', 'Bar')
+            .field('localType', 'bar')
             .expect(200)
             .expect((res) => {
                 expect(res.body.success).toBe(false);
@@ -98,7 +98,7 @@ describe('POST ' + base + 'signup-manager', () => {
             .field('localName', 'ciao')
             .field('email', 'ciao@.ie')
             .field('address', JSON.stringify(address))
-            .field('localType', 'Bar')
+            .field('localType', 'bar')
             .expect(501)
             .expect((res) => {
                 expect(res.body.success).toBe(false);
@@ -123,17 +123,21 @@ describe('PUT ' + base + 'signup-manager', () => {
             .mockImplementation((id) => {
                 if (id === 1000)
                     return {
+                        _id: id,
                         verifiedEmail: true,
                         localName: 'ciao',
                         address,
-                        localType: 'Bar',
+                        localType: 'bar',
+                        save: async () => {},
                     };
                 if (id === 1001)
                     return {
+                        _id: id,
                         verifiedEmail: false,
                         localName: 'ciao',
                         address,
-                        localType: 'Bar',
+                        localType: 'bar',
+                        save: async () => {},
                     };
             });
     });

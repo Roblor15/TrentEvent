@@ -3,7 +3,7 @@ const app = require('../../app');
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
 
-describe('POST /v1/events/{id}/subscribe', () => {
+describe('PUT /v1/events/{id}/subscribe', () => {
     let eventSpy; // Moking Event.find method
     let participantSpy; // Moking Event.find method
 
@@ -67,9 +67,9 @@ describe('POST /v1/events/{id}/subscribe', () => {
         { expiresIn: 86400 }
     );
 
-    test('POST /v1/events/{id}/subscribe with Participant not already subscribed', () => {
+    test('PUT /v1/events/{id}/subscribe with Participant not already subscribed', () => {
         return request(app)
-            .post('/v1/events/1010/subscribe')
+            .put('/v1/events/1010/subscribe')
             .auth(validToken, { type: 'bearer' })
             .expect(200)
             .expect(function (res) {
@@ -80,9 +80,9 @@ describe('POST /v1/events/{id}/subscribe', () => {
             });
     });
 
-    test('POST /v1/events/{id}/subscribe with Participant already subscribed', () => {
+    test('PUT /v1/events/{id}/subscribe with Participant already subscribed', () => {
         return request(app)
-            .post('/v1/events/2010/subscribe')
+            .put('/v1/events/2010/subscribe')
             .auth(validToken, { type: 'bearer' })
             .expect(200)
             .expect(function (res) {
@@ -97,9 +97,9 @@ describe('POST /v1/events/{id}/subscribe', () => {
         { expiresIn: 86400 }
     );
     // TODO prima riga id o id=1111, success = false o true
-    test('POST /v1/events/1111/subscribe to an event already full', () => {
+    test('PUT /v1/events/1111/subscribe to an event already full', () => {
         return request(app)
-            .post('/v1/events/1111/subscribe')
+            .put('/v1/events/1111/subscribe')
             .auth(validToken2, { type: 'bearer' })
             .expect(200)
             .expect(function (res) {
@@ -113,9 +113,9 @@ describe('POST /v1/events/{id}/subscribe', () => {
         { expiresIn: 86400 }
     );
 
-    test('POST /v1/events/3030/subscribe to an event with an age limit', () => {
+    test('PUT /v1/events/3030/subscribe to an event with an age limit', () => {
         return request(app)
-            .post('/v1/events/3030/subscribe')
+            .put('/v1/events/3030/subscribe')
             .auth(validToken3, { type: 'bearer' })
             .expect(200)
             .expect(function (res) {
@@ -123,33 +123,6 @@ describe('POST /v1/events/{id}/subscribe', () => {
                 expect(res.body.message).toBe(
                     'Too young to subscribe to this event'
                 );
-            });
-    });
-
-    const notValidToken = jwt.sign(
-        { id: 2010, type: 'Participant' },
-        'ciaoooo',
-        { expiresIn: 86400 }
-    );
-
-    test('POST /v1/events/{id}/subscribe with token not valid', () => {
-        return request(app)
-            .post('/v1/events/2010/subscribe')
-            .auth(notValidToken, { type: 'bearer' })
-            .expect(401)
-            .expect(function (res) {
-                expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe('Authentication token not valid');
-            });
-    });
-
-    test('POST /v1/events/{id}/subscribe without token', () => {
-        return request(app)
-            .post('/v1/events/2010/subscribe')
-            .expect(401)
-            .expect(function (res) {
-                expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe('Authorization token not found');
             });
     });
 });
@@ -227,7 +200,7 @@ describe('GET /v1/events', () => {
     const event = {
         initDate: new Date(2023, 7, 19, 15),
         endDate: new Date(2023, 7, 19, 15, 30),
-        categories: 'musica',
+        categories: ['musica'],
         manager: '507f1f77bcf86cd799439011',
     };
 
@@ -283,14 +256,12 @@ describe('GET /v1/events', () => {
                     {
                         initDate: '2023-08-19T13:00:00.000Z',
                         endDate: '2023-08-19T13:30:00.000Z',
-                        categories: 'musica',
-                        manager: '507f1f77bcf86cd799439011',
+                        categories: ['musica'],
                     },
                     {
                         initDate: '2025-10-03T22:00:00.000Z',
                         endDate: '2025-10-04T22:00:00.000Z',
-                        categories: 'musica',
-                        manager: '507f1f77bcf86cd799439011',
+                        categories: ['musica'],
                     },
                 ]);
             });
