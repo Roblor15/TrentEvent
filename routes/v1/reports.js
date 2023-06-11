@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 
 const Report = require('../../models/report');
+const Event = require('../../models/event');
 
 const { check } = require('../../lib/authorization');
 const checkProperties = require('../../lib/check-properties');
