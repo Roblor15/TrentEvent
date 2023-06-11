@@ -87,8 +87,8 @@ router.get('/', async function (_req, res) {
             )
         ).map((e) => ({
             ...e._doc,
-            manager: e.manager._id,
-            address: e.manager.address,
+            manager: e.manager?._id,
+            address: e.manager?.address,
             _v: undefined,
             participantsList: undefined,
             participants: e.participantsList.length,
