@@ -117,5 +117,29 @@
  *           items:
  *             type: string
  *           description: The category of the event (1 or more categories)
+ *     Supervisor:
+ *       type: object
+ *       required: ["name", "surname", "username", "email", "birthDate"]
+ *       properties:
+ *         name:
+ *           type: string
+ *           description: the name of the user
+ *           example: Mario
+ *         surname:
+ *           type: string
+ *           description: the surname of the user
+ *           example: Rossi
+ *         username:
+ *           type: string}
+ *           description: the username of the user
+ *           example: mario_rossi18
+ *         email:
+ *           type: string
+ *           description: the email of the user
+ *           example: Mario.Rossi@gmail.com
+ *         birthDate:
+ *           type: string
+ *           format: date
+ *           description: the birth data of the user
  */
 // TODO schema report and supervisor

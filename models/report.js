@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
 const reportSchema = new Schema({
-    report: {
+    reportText: {
         type: String,
         maxLength: 300,
         required: true,

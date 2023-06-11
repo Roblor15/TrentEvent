@@ -2,11 +2,9 @@ const express = require('express');
 
 const router = express.Router();
 
-const Participant = require('../../models/participant');
-const Manager = require('../../models/manager');
+
 const Report = require('../../models/report');
 
-const checkProperties = require('../../lib/check-properties');
 const { check } = require('../../lib/authorization');
 
 /**
@@ -64,6 +62,51 @@ router.post('/report', check('Participant'), async function (req, res) {
         res.status(200).json({
             success: true,
             participantId: result._id.toString(),
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
+/**
+ * @swagger
+ * /v1/events/:
+ *   get:
+ *     description: check reports
+ *     tags:
+ *       - reports
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.get('/', async function (req, res) {
+    try {
+        const report = await Report.find();
+
+        res.status(200).json({
+            success: true,
+            message: 'Here are the reports of the events',
+            reports:{
+                reportText: report.reportText,
+                participant: report.participant,
+                manager: report.manager,
+            },
         });
     } catch (e) {
         res.status(501).json({ success: false, message: e.toString() });
