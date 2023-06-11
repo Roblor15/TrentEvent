@@ -24,12 +24,15 @@ const checkProperties = require('../../lib/check-properties');
  *         application/json:
  *           schema:
  *             type: object
- *             required: ["eventId"]
+ *             required: ["eventId", "reportText"]
  *             properties:
  *               eventId:
  *                 type: string
  *                 format: uuid
  *                 description: id of the event
+ *               reportText:
+ *                 type: string
+ *                 description: report text
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -59,7 +62,7 @@ const checkProperties = require('../../lib/check-properties');
 router.post(
     '/',
     check('Participant'),
-    checkProperties(['eventId']),
+    checkProperties(['eventId', 'reportText']),
     async function (req, res) {
         try {
             const event = await Event.findById(req.body.eventId);
@@ -68,7 +71,6 @@ router.post(
                 result = await Report.create({
                     ...req.body,
                     participant: req.user.id,
-                    event: req.user.eventIdd,
                 });
                 res.status(200).json({
                     success: true,
@@ -116,7 +118,9 @@ router.post(
  */
 router.get('/', check('Supervisor'), async function (req, res) {
     try {
-        const reports = await Report.find();
+        const reports = (await Report.find().populate('participant')).map(
+            (r) => ({ ...r._doc, participant: r.participant.username })
+        );
 
         res.status(200).json({
             success: true,

@@ -330,7 +330,7 @@ router.get('/:id/events', async function (req, res) {
             const events = (
                 await Event.find({
                     manager: req.params.id,
-                })
+                }).populate('manager')
             ).map((e) => ({
                 ...e._doc,
                 manager: e.manager._id,
