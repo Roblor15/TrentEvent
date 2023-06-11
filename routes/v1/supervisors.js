@@ -151,4 +151,45 @@ router.put(
     }
 );
 
+/**
+ * @swagger
+ * /v1/report/:
+ *   get:
+ *     description: check managers
+ *     tags:
+ *       - managers
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.get('/manager', check('Supervisor'), async function (req, res) {
+    try {
+        const managers = await Manager.find();
+
+        res.status(200).json({
+            success: true,
+            message: 'Here are the managers',
+            managers,
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
 module.exports = router;

@@ -77,7 +77,7 @@ router.post('/report', check('Participant'), async function (req, res) {
 
 /**
  * @swagger
- * /v1/events/:
+ * /v1/report/:
  *   get:
  *     description: check reports
  *     tags:
@@ -115,5 +115,6 @@ router.get('/', check('Supervisor'), async function (req, res) {
         res.status(501).json({ success: false, message: e.toString() });
     }
 });
+
 
 module.exports = router;
