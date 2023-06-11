@@ -102,7 +102,7 @@ router.post('/report', check('Participant'), async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.get('/', async function (req, res) {
+router.get('/', check('Supervisor'), async function (req, res) {
     try {
         const reports = await Report.find();
 
@@ -116,3 +116,4 @@ router.get('/', async function (req, res) {
     }
 });
 
+module.exports = router;

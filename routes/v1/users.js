@@ -4,11 +4,13 @@ const jwt = require('jsonwebtoken');
 
 const Manager = require('../../models/manager');
 const Participant = require('../../models/participant');
+const Supervisor = require('../../models/supervisor');
+
 const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
 const checkProperties = require('../../lib/check-properties');
 const { check } = require('../../lib/authorization');
-const { generatePassword, isEmail } = require('../../lib/general');
+const { isEmail } = require('../../lib/general');
 
 const router = express.Router();
 
@@ -79,8 +81,10 @@ router.post(
             const { email, address } = req.body;
 
             // control if already exists a manager or a participant with the same email
-            let user = await Manager.findOne({ email });
-            if (!user) user = await Participant.findOne({ email });
+            const user =
+                (await Manager.findOne({ email })) ||
+                (await Supervisor.findOne({ email })) ||
+                (await Participant.findOne({ email }));
 
             if (user)
                 return res
@@ -128,147 +132,6 @@ router.post(
                     localType: result.localType,
                 },
             });
-        } catch (e) {
-            res.status(501).json({ success: false, message: e.toString() });
-        }
-    }
-);
-
-/**
- * @swagger
- * /v1/users/signup-manager:
- *   put:
- *     description: Accept or deny the request to become Events Mangager.
- *     tags:
- *       - users
- *     security:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: ["id", "approved"]
- *             properties:
- *               id:
- *                 type: string
- *                 format: uuid
- *                 description: The id of the request to approve.
- *               approved:
- *                 type: boolean
- *                 description: If the request is approved or not.
- *               sendEmail:
- *                 type: boolean
- *                 description: Decide if send an email
- *     responses:
- *       200:
- *         description: Request succesfully processed.
- *         content:
- *           application/json:
- *             schema:
- *               allOf:
- *                 - $ref: '#/components/schemas/Response'
- *                 - type: object
- *                   properties:
- *                     manager:
- *                       $ref: '#/components/schemas/Manager'
- *       400:
- *         description: Malformed request.
- *         content:
- *           application/json:
- *            schema:
- *               $ref: '#/components/schemas/Response'
- *       401:
- *         description: Not Authorized.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Response'
- *       501:
- *         description: Internal server error.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Response'
- */
-router.put(
-    '/signup-manager',
-    checkProperties(['id', 'approved']),
-    async function (req, res) {
-        try {
-            // retrieve id and approved from body
-            const { id, approved } = req.body;
-
-            // find and update the manager
-            const user = await Manager.findById(id);
-
-            // throw an error if user not found
-            if (!user) throw new Error('User not found');
-
-            // control if the email address is confermed
-            if (user.verifiedEmail) {
-                user.approvation = {
-                    approved,
-                    when: Date.now(),
-                };
-
-                // create body of the email
-                let html;
-                if (approved) {
-                    // create a new password for the user
-                    const newPassword = generatePassword(12);
-
-                    user.password = newPassword;
-
-                    html = `<p>Ciao ${user.localName},<br/>
-                        La tua richiesta per diventare Organizzatore di eventi è stata accettata.</p>
-                        <p>Per accedere al tuo account usa le credenziali:<br/>
-                        <b>email</b>: ${user.email}<br/>
-                        <b>password</b>: ${newPassword}</p>`;
-                } else {
-                    html = `<p>Ciao ${user.localName},</p>
-                        <p>La tua richiesta per diventare Organizzatore di eventi è stata rifiutata.</p>`;
-                }
-
-                await user.save();
-
-                if (req.body.sendEmail === true) {
-                    // send the email
-                    await sendMail({
-                        to: user.email,
-                        subject: 'Richiesta Organizzatore di eventi',
-                        html,
-                        textEncoding: 'base64',
-                    });
-                }
-
-                // response with main fields of manager
-                res.status(200).json({
-                    success: true,
-                    message: "Manager's request updated",
-                    manager: {
-                        localName: user.localName,
-                        email: user.email,
-                        address: user.address,
-                        localType: user.localType,
-                    },
-                });
-            } else {
-                // response with main fields of manager
-                res.status(200).json({
-                    success: false,
-                    message: "Manager's email is not confermed",
-                    manager: {
-                        localName: user.localName,
-                        email: user.email,
-                        address: user.address,
-                        localType: user.localType,
-                    },
-                });
-            }
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
         }
@@ -346,6 +209,7 @@ router.post(
             const user = {
                 email:
                     (await Participant.findOne({ email })) ||
+                    (await Supervisor.findOne({ email })) ||
                     (await Manager.findOne({ email })),
                 username: await Participant.findOne({ username }),
             };
@@ -453,33 +317,44 @@ router.post(
                 user = await Participant.findOne({
                     username: req.body.credential,
                 });
-            } else {
+            }
+
+            if (!user) {
                 // find the participant or the manager
                 user = await Participant.findOne({
                     email: req.body.credential,
                 });
+            }
 
-                if (!user) {
-                    user = await Manager.findOne({
-                        email: req.body.credential,
+            if (!user) {
+                user = await Manager.findOne({
+                    email: req.body.credential,
+                });
+
+                // control if manager was approved
+                if (user.approvation === undefined)
+                    return res.status(200).json({
+                        success: false,
+                        message: "Manager's request is not approved yet",
+                    });
+                if (user.approvation.approved === false)
+                    return res.status(200).json({
+                        success: false,
+                        message: "Manager's request is not approved",
                     });
 
-                    // control if manager was approved
-                    if (user.approvation === undefined)
-                        return res.status(200).json({
-                            success: false,
-                            message: "Manager's request is not approved yet",
-                        });
-                    if (user.approvation.approved === false)
-                        return res.status(200).json({
-                            success: false,
-                            message: "Manager's request is not approved",
-                        });
-
-                    // change type to Manager
-                    type = 'Manager';
-                }
+                // change type to Manager
+                type = 'Manager';
             }
+
+            if (!user) {
+                user = await Participant.findOne({
+                    email: req.body.credential,
+                });
+
+                type = 'Supervisor';
+            }
+
             // control if user is found
             if (!user)
                 return res

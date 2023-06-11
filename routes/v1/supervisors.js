@@ -4,38 +4,52 @@ const Manager = require('../../models/manager');
 //const Supervisor = require('../../models/supervisor');
 const checkProperties = require('../../lib/check-properties');
 const { check } = require('../../lib/authorization');
+const { generatePassword } = require('../../lib/general');
+const sendMail = require('../../lib/notify');
 
 const router = express.Router();
 
 /**
  * @swagger
- * /v1/supervisors/ban-manager-account:
+ * /v1/supervisors/manager-approvation:
  *   put:
- *     description: Accept a new manager request
+ *     description: Accept or deny the request to become Events Mangager.
  *     tags:
- *       - Manager
+ *       - supervisors
  *     security:
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: ["id"]
+ *             required: ["id", "approved"]
  *             properties:
  *               id:
  *                 type: string
  *                 format: uuid
- *                 description: The id of the manager to accept.
+ *                 description: The id of the request to approve.
+ *               approved:
+ *                 type: boolean
+ *                 description: If the request is approved or not.
+ *               sendEmail:
+ *                 type: boolean
+ *                 description: Decide if send an email
  *     responses:
  *       200:
  *         description: Request succesfully processed.
  *         content:
  *           application/json:
  *             schema:
- *                $ref: '#/components/schemas/Response'
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     manager:
+ *                       $ref: '#/components/schemas/Manager'
  *       400:
  *         description: Malformed request.
  *         content:
@@ -56,104 +70,85 @@ const router = express.Router();
  *               $ref: '#/components/schemas/Response'
  */
 router.put(
-    '/accept-manager',
+    '/manager-approvation',
+    check('Supervisor'),
     checkProperties(['id', 'approved']),
     async function (req, res) {
         try {
+            // retrieve id and approved from body
             const { id, approved } = req.body;
-            const manager = await Manager.findById(id);
-            if (!manager) {
-                return res.status(200).json({
-                    success: false,
-                    message: "The manager doesn't exist",
-                });
-            }
-            if (!manager.verifiedEmail) {
-                return res.status(200).json({
-                    success: false,
-                    message: 'The manager is not yet verified exist',
-                });
-            }
 
-            if (manager.verifiedEmail) {
-                manager.approvation = approved;
-                if (!approved) {
-                    manager.approvation.approved = true;
-                    return res.status(200).json({
-                        success: true,
-                        message: 'You have accepted the new manager',
+            // find and update the manager
+            const user = await Manager.findById(id);
+
+            // throw an error if user not found
+            if (!user) throw new Error('User not found');
+
+            // control if the email address is confermed
+            if (user.verifiedEmail) {
+                user.approvation = {
+                    approved,
+                    when: Date.now(),
+                };
+
+                // create body of the email
+                let html;
+                if (approved) {
+                    // create a new password for the user
+                    const newPassword = generatePassword(12);
+
+                    user.password = newPassword;
+
+                    html = `<p>Ciao ${user.localName},<br/>
+                        La tua richiesta per diventare Organizzatore di eventi è stata accettata.</p>
+                        <p>Per accedere al tuo account usa le credenziali:<br/>
+                        <b>email</b>: ${user.email}<br/>
+                        <b>password</b>: ${newPassword}</p>`;
+                } else {
+                    html = `<p>Ciao ${user.localName},</p>
+                        <p>La tua richiesta per diventare Organizzatore di eventi è stata rifiutata.</p>`;
+                }
+
+                await user.save();
+
+                if (req.body.sendEmail === true) {
+                    // send the email
+                    await sendMail({
+                        to: user.email,
+                        subject: 'Richiesta Organizzatore di eventi',
+                        html,
+                        textEncoding: 'base64',
                     });
                 }
+
+                // response with main fields of manager
+                res.status(200).json({
+                    success: true,
+                    message: "Manager's request updated",
+                    manager: {
+                        localName: user.localName,
+                        email: user.email,
+                        address: user.address,
+                        localType: user.localType,
+                    },
+                });
+            } else {
+                // response with main fields of manager
+                res.status(200).json({
+                    success: false,
+                    message: "Manager's email is not confermed",
+                    manager: {
+                        localName: user.localName,
+                        email: user.email,
+                        address: user.address,
+                        localType: user.localType,
+                    },
+                });
             }
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
         }
     }
 );
-/**
- * @swagger
- * /v1/supervisors/ban-manager-account:
- *   put:
- *     description: Ban a manager account
- *     tags:
- *       - Manager
- *     security:
- *       type: http
- *       scheme: bearer
- *       bearerFormat: JWT
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: ["id"]
- *             properties:
- *               id:
- *                 type: string
- *                 format: uuid
- *                 description: The id of the manager to ban.
- *     responses:
- *       200:
- *         description: Request succesfully processed.
- *         content:
- *           application/json:
- *             schema:
- *                $ref: '#/components/schemas/Response'
- *       401:
- *         description: Not Authorized.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Response'
- *       501:
- *         description: Internal server error.
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Response'
- */
-router.put('/ban-manager-account', check('Manager'), async function (req, res) {
-    try {
-        const { id, approved } = req.body;
-        const manager = await Manager.findById(id);
 
-        if (!manager) {
-            return res.status(200).json({
-                success: false,
-                message: "The manager doesn't exist",
-            });
-        }
-        if (manager) {
-            manager.approvation = approved;
-            if (approved) {
-                manager.approvation.approved = false;
-                return res.status(200).json({
-                    success: true,
-                    message: 'You have banned the manager',
-                });
-            }
-        }
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-    }
-});
+module.exports = router;

@@ -5,7 +5,6 @@ const { isEmail } = require('../lib/general');
 const { Schema } = mongoose;
 
 const supervisorSchema = new Schema({
-   
     email: {
         type: String,
         required: [true, 'Email not provided'],
