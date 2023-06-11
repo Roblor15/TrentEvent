@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const bcrypt = require('mongoose-bcrypt');
+const { isEmail } = require('../lib/general');
 const { Schema } = mongoose;
 
 const participantSchema = new Schema({
@@ -14,6 +15,10 @@ const participantSchema = new Schema({
     username: {
         type: String,
         required: [true, 'Username not provided'],
+        validate: {
+            validator: (v) => !isEmail(v),
+            message: (props) => `${props.value} is not a valid username`,
+        },
     },
     email: {
         type: String,
@@ -21,7 +26,7 @@ const participantSchema = new Schema({
         index: true,
         unique: true,
         validate: {
-            validator: (v) => /[a-z0-9]+@[a-z]+\.[a-z]{2,3}/.test(v),
+            validator: isEmail,
             message: (props) => `${props.value} is not a valid email!`,
         },
     },
@@ -50,6 +55,7 @@ participantSchema.pre('validate', function (next) {
         next();
     }
 });
+
 participantSchema.plugin(bcrypt);
 
 module.exports = mongoose.model('Participant', participantSchema);

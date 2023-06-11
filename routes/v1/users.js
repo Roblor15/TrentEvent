@@ -1,12 +1,16 @@
 const express = require('express');
 const multer = require('multer');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 
-const Manager = require('../../models/managers');
+const Manager = require('../../models/manager');
 const Participant = require('../../models/participant');
+const Event = require('../../models/event');
+
 const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
+const checkProperties = require('../../lib/check-properties');
+const { check } = require('../../lib/authorization');
+const { generatePassword, isEmail } = require('../../lib/general');
 
 const router = express.Router();
 
@@ -19,6 +23,8 @@ const upload = multer({ storage: multer.memoryStorage() });
  *   post:
  *     summury: Send a request to register as an Events Manager.
  *     description: Send a request to register as an Event Manager. You will be notify with an email, if your request is accepted or denied.
+ *     tags:
+ *       - users
  *     requestBody:
  *       required: true
  *       content:
@@ -34,6 +40,13 @@ const upload = multer({ storage: multer.memoryStorage() });
  *                     items:
  *                       type: string
  *                       format: binary
+ *                   sendEmail:
+ *                     type: boolean
+ *                     description: Decide if the system sends an email for conferming it
+ *                     default: false
+ *                   linkConfermation:
+ *                     type: string
+ *                     description: the link sended via email where the user confirms the email address
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -44,8 +57,16 @@ const upload = multer({ storage: multer.memoryStorage() });
  *                 - $ref: '#/components/schemas/Response'
  *                 - type: object
  *                   properties:
- *                     manager:
- *                       $ref: '#/components/schemas/Manager'
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: Id of the created manager
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
  *       501:
  *         description: Internal server error.
  *         content:
@@ -56,6 +77,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.post(
     '/signup-manager',
     upload.array('photos', 5),
+    checkProperties(['localName', 'email', 'address', 'localType']),
     async function (req, res) {
         try {
             // retrieve email and address from body
@@ -89,25 +111,22 @@ router.post(
             });
 
             // send email with the link to conferm the email address
-            await sendMail({
-                to: result.email,
-                subject: 'Conferma Email 🚀',
-                html: `<p>Ciao ${result.localName},</p>
-                   <p>Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a>.<br/>
+            if (req.body.sendEmail === 'true') {
+                sendMail({
+                    to: result.email,
+                    subject: 'Conferma Email 🚀',
+                    html: `<p>Ciao ${result.localName},</p>
+                   <p>Per confermare questa email clicca <a href="${req.body.linkConfermation}/${result._id}">qui</a>.<br/>
                     Verrai ricontattato con la rispsta di un supervisore.</p>`,
-                textEncoding: 'base64',
-            });
+                    textEncoding: 'base64',
+                }).catch((e) => console.log(e));
+            }
 
             // response with main fields of manager
             res.status(200).json({
                 success: true,
                 message: "Manager's request accepted",
-                manager: {
-                    localName: result.localName,
-                    email: result.email,
-                    address: result.address,
-                    localType: result.localType,
-                },
+                id: result._id.toString(),
             });
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
@@ -120,6 +139,8 @@ router.post(
  * /v1/users/signup-manager:
  *   put:
  *     description: Accept or deny the request to become Events Mangager.
+ *     tags:
+ *       - users
  *     security:
  *       type: http
  *       scheme: bearer
@@ -139,6 +160,9 @@ router.post(
  *               approved:
  *                 type: boolean
  *                 description: If the request is approved or not.
+ *               sendEmail:
+ *                 type: boolean
+ *                 description: Decide if send an email
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -149,8 +173,16 @@ router.post(
  *                 - $ref: '#/components/schemas/Response'
  *                 - type: object
  *                   properties:
- *                     manager:
- *                       $ref: '#/components/schemas/Manager'
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *                       description: Id of the approved manager
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
  *       401:
  *         description: Not Authorized.
  *         content:
@@ -164,84 +196,83 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.put('/signup-manager', async function (req, res) {
-    try {
-        // retrieve id and approved from body
-        const { id, approved } = req.body;
+router.put(
+    '/signup-manager',
+    checkProperties(['id', 'approved']),
+    async function (req, res) {
+        try {
+            // retrieve id and approved from body
+            const { id, approved } = req.body;
 
-        // find and update the manager
-        const user = await Manager.findById(id);
+            // find and update the manager
+            const user = await Manager.findById(id);
 
-        // throw an error if user not found
-        if (!user) throw new Error('User not found');
+            // throw an error if user not found
+            if (!user) throw new Error('User not found');
 
-        // control if the email address is confermed
-        if (user.verifiedEmail) {
-            user.approvation = {
-                approved,
-                when: Date.now(),
-            };
+            // control if the email address is confermed
+            if (user.verifiedEmail) {
+                user.approvation = {
+                    approved,
+                    when: Date.now(),
+                };
 
-            // create body of the email
-            let html;
-            if (approved) {
-                // create a new password for the user
-                const newPassword = generatePassword(12);
+                // create body of the email
+                let html;
+                if (approved) {
+                    // create a new password for the user
+                    const newPassword = generatePassword(12);
 
-                user.password = newPassword;
+                    user.password = newPassword;
 
-                html = `<p>Ciao ${user.localName},<br/>
+                    html = `<p>Ciao ${user.localName},<br/>
                         La tua richiesta per diventare Organizzatore di eventi è stata accettata.</p>
                         <p>Per accedere al tuo account usa le credenziali:<br/>
                         <b>email</b>: ${user.email}<br/>
                         <b>password</b>: ${newPassword}</p>`;
-            } else {
-                html = `<p>Ciao ${user.localName},</p>
+                } else {
+                    html = `<p>Ciao ${user.localName},</p>
                         <p>La tua richiesta per diventare Organizzatore di eventi è stata rifiutata.</p>`;
+                }
+
+                await user.save();
+
+                if (req.body.sendEmail === true) {
+                    // send the email
+                    await sendMail({
+                        to: user.email,
+                        subject: 'Richiesta Organizzatore di eventi',
+                        html,
+                        textEncoding: 'base64',
+                    });
+                }
+
+                // response with main fields of manager
+                res.status(200).json({
+                    success: true,
+                    message: "Manager's request updated",
+                    id: user._id.toString(),
+                });
+            } else {
+                // response with main fields of manager
+                res.status(200).json({
+                    success: false,
+                    message: "Manager's email is not confermed",
+                });
             }
-
-            // send the email
-            await sendMail({
-                to: user.email,
-                subject: 'Richiesta Organizzatore di eventi',
-                html,
-                textEncoding: 'base64',
-            });
-
-            // response with main fields of manager
-            res.status(200).json({
-                success: true,
-                message: "Manager's request updated",
-                manager: {
-                    localName: user.localName,
-                    email: user.email,
-                    address: user.address,
-                    localType: user.localType,
-                },
-            });
-        } else {
-            // response with main fields of manager
-            res.status(200).json({
-                success: false,
-                message: "Manager's email is not confermed",
-                manager: {
-                    localName: user.localName,
-                    email: user.email,
-                    address: user.address,
-                    localType: user.localType,
-                },
-            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
         }
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
     }
-});
+);
 
 /**
  * @swagger
  * /v1/users/signup-user:
  *   post:
  *     description: Registration for becoming a user
+ *     tags:
+ *       - users
  *     requestBody:
  *      required: true
  *      content:
@@ -250,12 +281,18 @@ router.put('/signup-manager', async function (req, res) {
  *            allOf:
  *              - $ref: '#/components/schemas/Participant'
  *              - type: object
- *                required: ["email","password","birthDate"]
+ *                required: ["password"]
  *                properties:
  *                  password:
  *                    type: string
  *                    description: the password of the account
  *                    example: ciao1234
+ *                  sendEmail:
+ *                    type: boolean
+ *                    description: decide if send email for confermation
+ *                  linkConfermation:
+ *                    type: string
+ *                    description: the link sended via email where the user confirms the email address
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -266,8 +303,15 @@ router.put('/signup-manager', async function (req, res) {
  *                 - $ref: '#/components/schemas/Response'
  *                 - type: object
  *                   properties:
- *                     participant:
- *                       $ref: '#/components/schemas/Participant'
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
  *       501:
  *         description: Internal server error.
  *         content:
@@ -275,93 +319,92 @@ router.put('/signup-manager', async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/signup-user', async function (req, res) {
-    try {
-        // retrieve username and email from body
-        const { username, email } = req.body;
+router.post(
+    '/signup-user',
+    checkProperties([
+        'name',
+        'surname',
+        'username',
+        'email',
+        'birthDate',
+        'password',
+    ]),
+    async function (req, res) {
+        try {
+            // retrieve username and email from body
+            const { username, email } = req.body;
 
-        // control if already exists a user with the same email or username
-        const user = {
-            email:
-                (await Participant.findOne({ email })) ||
-                (await Manager.findOne({ email })),
-            username: await Participant.findOne({ username }),
-        };
-        if (user.email)
-            return res
-                .status(200)
-                .json({ success: false, message: 'Email already used' });
-        if (user.username)
-            return res
-                .status(200)
-                .json({ success: false, message: 'Username already used' });
+            // control if already exists a user with the same email or username
+            const user = {
+                email:
+                    (await Participant.findOne({ email })) ||
+                    (await Manager.findOne({ email })),
+                username: await Participant.findOne({ username }),
+            };
+            if (user.email)
+                return res
+                    .status(200)
+                    .json({ success: false, message: 'Email already used' });
+            if (user.username)
+                return res
+                    .status(200)
+                    .json({ success: false, message: 'Username already used' });
 
-        // create a Participant instance with all attributes of body
-        const result = await Participant.create({
-            ...req.body,
-            verifiedEmail: false,
-            birthDate: new Date(
-                req.body.birthDate.year,
-                req.body.birthDate.month,
-                req.body.birthDate.day
-            ),
-        });
+            // create a Participant instance with all attributes of body
+            const result = await Participant.create({
+                ...req.body,
+                birthDate: new Date(
+                    req.body.birthDate.year,
+                    req.body.birthDate.month - 1,
+                    req.body.birthDate.day
+                ),
+                verifiedEmail: false,
+            });
 
-        // send email
-        await sendMail({
-            to: result.email,
-            subject: 'Conferma Email 🚀',
-            html: `<p>Ciao ${result.name} ${result.surname},</p>
-                   <p>La tua iscrizione è andata a buon fine. Per confermare questa email clicca <a href="http://localhost:3000/v1/users/verify-email/${result._id}">qui</a></p>`,
-            textEncoding: 'base64',
-        });
+            if (req.body.sendEmail === true) {
+                // send email
+                sendMail({
+                    to: result.email,
+                    subject: 'Conferma Email 🚀',
+                    html: `<p>Ciao ${result.name} ${result.surname},</p>
+                   <p>La tua iscrizione è andata a buon fine. Per confermare questa email clicca <a href="${req.body.linkConfermation}/${result._id}">qui</a></p>`,
+                    textEncoding: 'base64',
+                }).catch(console.log);
+            }
 
-        // response with main fields of participant
-        res.status(200).json({
-            success: true,
-            message: 'User correctly signed up',
-            participant: {
-                name: result.name,
-                surname: result.surname,
-                username: result.username,
-                email: result.email,
-                birthDate: result.birthDate,
-            },
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
+            // response with main fields of participant
+            res.status(200).json({
+                success: true,
+                message: 'User correctly signed up',
+                id: result._id.toString(),
+            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
+        }
     }
-});
+);
 
 /**
  * @swagger
  * /v1/users/login:
  *   post:
  *     description: Login for the user.
+ *     tags:
+ *       - users
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             oneOf:
- *               - type: object
- *                 required: ["email", "password"]
- *                 properties:
- *                   email:
- *                     type: string
- *                     description: The email of the user.
- *                   password:
- *                     type: string
- *                     description: The password of the user.
- *               - type: object
- *                 required: ["username", "password"]
- *                 properties:
- *                   username:
- *                     type: string
- *                     description: The username of the user.
- *                   password:
- *                     type: string
- *                     description: The password of the user.
+ *             type: object
+ *             required: ["credential", "password"]
+ *             properties:
+ *               credential:
+ *                 type: string
+ *                 description: The email or the username of the user.
+ *               password:
+ *                 type: string
+ *                 description: The password of the user.
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -375,6 +418,12 @@ router.post('/signup-user', async function (req, res) {
  *                     token:
  *                       type: string
  *                       description: The token the user has to use in order to desclare his identity.
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
  *       501:
  *         description: Internal server error.
  *         content:
@@ -382,74 +431,85 @@ router.post('/signup-user', async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/login', async function (req, res) {
-    try {
-        let user,
-            type = 'Participant';
+router.post(
+    '/login',
+    checkProperties(['credential', 'password']),
+    async function (req, res) {
+        try {
+            let user,
+                type = 'Participant';
 
-        // if body contains username it has to be a participant
-        if (req.body.username) {
-            // find the participant
-            user = await Participant.findOne({
-                username: req.body.username,
-            });
-        } else {
-            // find the participant or the manager
-            user = await Participant.findOne({ email: req.body.email });
-            if (!user) {
-                user = await Manager.findOne({ email: req.body.email });
+            // if body contains username it has to be a participant
+            if (!isEmail(req.body.credential)) {
+                // find the participant
+                user = await Participant.findOne({
+                    username: req.body.credential,
+                });
+            } else {
+                // find the participant or the manager
+                user = await Participant.findOne({
+                    email: req.body.credential,
+                });
 
-                // control if manager was approved
-                if (!user.approvation === undefined)
-                    return res.status(200).json({
-                        success: false,
-                        message: "Manager's request is not approved yet",
-                    });
-                if (!user.approvation.approved === undefined)
-                    return res.status(200).json({
-                        success: false,
-                        message: "Manager's request is not approved",
+                if (!user) {
+                    user = await Manager.findOne({
+                        email: req.body.credential,
                     });
 
-                // change type to Manager
-                type = 'Manager';
+                    // control if manager was approved
+                    if (user.approvation === undefined)
+                        return res.status(200).json({
+                            success: false,
+                            message: "Manager's request is not approved yet",
+                        });
+                    if (user.approvation.approved === false)
+                        return res.status(200).json({
+                            success: false,
+                            message: "Manager's request is not approved",
+                        });
+
+                    // change type to Manager
+                    type = 'Manager';
+                }
             }
-        }
-        // control if user is found
-        if (!user)
-            return res
-                .status(200)
-                .json({ success: false, message: 'User not found' });
-        // verify the password
-        if (!(await user.verifyPassword(req.body.password)))
-            return res
-                .status(200)
-                .json({ success: false, message: 'Wrong password' });
-        // user authenticated -> create a token
-        const payload = {
-            email: user.email,
-            id: user._id,
-            type,
-        };
-        const options = { expiresIn: 86400 }; // expires in 24 hours
-        const token = jwt.sign(payload, process.env.JWT_SECRET, options);
+            // control if user is found
+            if (!user)
+                return res
+                    .status(200)
+                    .json({ success: false, message: 'User not found' });
+            // verify the password
+            if (!(await user.verifyPassword(req.body.password)))
+                return res
+                    .status(200)
+                    .json({ success: false, message: 'Wrong password' });
+            // user authenticated -> create a token
+            const payload = {
+                email: user.email,
+                id: user._id,
+                type,
+            };
+            const options = { expiresIn: 86400 }; // expires in 24 hours
+            const token = jwt.sign(payload, process.env.JWT_SECRET, options);
 
-        // response with with the token
-        res.status(200).json({
-            success: true,
-            message: 'Enjoy your token!',
-            token: token,
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
+            // response with with the token
+            res.status(200).json({
+                success: true,
+                message: 'Enjoy your token!',
+                token: token,
+            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
+        }
     }
-});
+);
 
 /**
  * @swagger
  * /v1/users/verify-email/{userId}:
  *   get:
  *     description: Verify the email of a user.
+ *     tags:
+ *       - users
  *     parameters:
  *       - in: path
  *         name: userId
@@ -504,13 +564,15 @@ router.get('/verify-email/:id', async function (req, res) {
  * /v1/users/google-auth:
  *   post:
  *     description: Login or sign up with google account.
+ *     tags:
+ *       - users
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: credential
+ *             required: ["credential"]
  *             properties:
  *               credential:
  *                 type: string
@@ -531,6 +593,12 @@ router.get('/verify-email/:id', async function (req, res) {
  *                     token:
  *                       type: string
  *                       description: The token the user has to use in order to desclare his identity.
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
  *       501:
  *         description: Internal server error.
  *         content:
@@ -538,147 +606,252 @@ router.get('/verify-email/:id', async function (req, res) {
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/google-auth', async function (req, res) {
-    try {
-        // verify the token
-        const googleUser = await verify(req.body.credential);
+router.post(
+    '/google-auth',
+    checkProperties(['credential']),
+    async function (req, res) {
+        try {
+            // verify the token
+            const googleUser = await verify(req.body.credential);
 
-        // controls if token was valid
-        if (googleUser === undefined) throw new Error('user not valid');
+            // controls if token was valid
+            if (googleUser === undefined) throw new Error('user not valid');
 
-        // find user in database
-        let user = await Participant.findOne({ idExteralApi: googleUser.sub });
-
-        // if not user, create it
-        if (!user) {
-            user = await Participant.create({
-                username: req.body.username,
-                email: googleUser.email,
+            // find user in database
+            let user = await Participant.findOne({
                 idExteralApi: googleUser.sub,
             });
+
+            // if not user, create it
+            if (!user) {
+                user = await Participant.create({
+                    username: req.body.username,
+                    email: googleUser.email,
+                    idExteralApi: googleUser.sub,
+                });
+            }
+
+            // create token
+            const payload = {
+                email: user.email,
+                id: user._id,
+                type: 'Participant',
+            };
+            const options = { expiresIn: 86400 }; // expires in 24 hours
+            const token = jwt.sign(payload, process.env.JWT_SECRET, options);
+
+            // return token
+            res.status(200).json({
+                success: true,
+                message: 'Enjoy your token!',
+                token: token,
+            });
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
         }
-
-        // create token
-        const payload = {
-            email: user.email,
-            id: user._id,
-            type: 'Participant',
-        };
-        const options = { expiresIn: 86400 }; // expires in 24 hours
-        const token = jwt.sign(payload, process.env.JWT_SECRET, options);
-
-        // return token
-        res.status(200).json({
-            success: true,
-            message: 'Enjoy your token!',
-            token: token,
-        });
-    } catch (e) {
-        res.status(501).send(e.toString());
     }
-});
-
-// Function thet create a random password
-const generatePassword = (
-    length = 20,
-    wishlist = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz~!@-#$'
-) =>
-    Array.from(crypto.randomFillSync(new Uint32Array(length)))
-        .map((x) => wishlist[x % wishlist.length])
-        .join('');
-
-module.exports = router;
+);
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     Response:
- *       type: object
- *       required: [ "success", "message" ]
- *       properties:
- *         success:
- *           type: boolean
- *           description: If the request was accepted or not.
- *           example: false
- *         message:
- *           type: string
- *           description: An informative message.
- *           example: Error
- *     Participant:
- *       type: object
- *       required: ["name", "surname", "username", "email" , "bithDate"]
- *       properties:
- *         name:
- *           type: string
- *           description: the name of the user
- *           example: Mario
- *         surname:
- *           type: string
- *           description: the surname of the user
- *           example: Rossi
- *         username:
- *           type: string
- *           description: the username of the user
- *           example: mario_rossi18
- *         email:
- *           type: string
- *           description: the email of the user
- *           example: Mario.Rossi@gmail.com
- *         birthDate:
- *           type: object
- *           description: the birth data of the user
- *           properties:
- *             year:
- *               type: integer
- *               maximum: 2023
- *             month:
- *               type: integer
- *               description: January is 0
- *               minimum: 0
- *               maximum: 11
- *             day:
- *               type:
- *               minimum: 1
- *               maximum: 31
- *     Manager:
- *       type: object
- *       required: ["localName", "email", "address", "localType"]
- *       properties:
- *         localName:
- *           type: string
- *           description: The local's name.
- *           example: Bar Bello
- *         email:
- *           type: string
- *           description: The user's email.
- *           example: mario.rossi@gmail.com
- *         address:
- *           type: object
- *           description: The address of the local.
- *           properties:
- *             country:
- *               type: string
- *               description: The country where the local is.
- *               example: Italy
- *             city:
- *               type: string
- *               description: The city where the local is.
- *               example: Trento
- *             street:
- *               type: string
- *               description: The street where the local is.
- *               example: corso tre novembre
- *             number:
- *               type: integer
- *               description: The house number of the local.
- *               example: 15
- *             cap:
- *               type: string
- *               description: The cap of the city.
- *               example: 38122
- *         localType:
- *           type: string
- *           description: The type of the local.
- *           example: Bar
+ * /v1/users/password:
+ *   put:
+ *     description: Change the password of the account.
+ *     tags:
+ *       - users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ["oldPassword", "newPassword"]
+ *             properties:
+ *               oldPassword:
+ *                 type: string
+ *                 description: The old password
+ *               newPassword:
+ *                 type: string
+ *                 describe: The new password
+ *
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       400:
+ *         description: Malformed request.
+ *         content:
+ *           application/json:
+ *            schema:
+ *               $ref: '#/components/schemas/Response'
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
  */
+router.put(
+    '/password',
+    check(['Participant', 'Manager']),
+    checkProperties(['newPassword', 'oldPassword']),
+    async function (req, res) {
+        try {
+            let user;
+            const { newPassword, oldPassword } = req.body;
+
+            if (req.user.type === 'Participant') {
+                // find user in database
+                user = await Participant.findById(req.user.id);
+            } else if (req.user.type === 'Manager') {
+                user = await Manager.findById(req.user.id);
+            }
+
+            if (await user.verifyPassword(oldPassword)) {
+                user.password = newPassword;
+
+                //save the user updates
+                await user.save();
+
+                return res.status(200).json({
+                    success: true,
+                    message: 'Password changed',
+                });
+            } else {
+                return res.status(200).json({
+                    success: false,
+                    message: 'Old password is wrong',
+                });
+            }
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
+        }
+    }
+);
+
+/**
+ * @swagger
+ * /v1/users/valid-token/:
+ *   get:
+ *     description: Check if the token is valid
+ *     tags:
+ *       - users
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.get('/valid-token', function (req, res) {
+    let token;
+    const authHeader = req.headers['authorization'];
+
+    if (authHeader?.startsWith('Bearer ')) {
+        token = authHeader.substring(7, authHeader.length);
+    } else {
+        return res
+            .status(400)
+            .json({ success: false, message: 'Authorization token not found' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        if (decoded.id && decoded.type) {
+            res.status(200).json({
+                success: true,
+                message: 'Your token is valid',
+            });
+        } else {
+            res.status(200).json({
+                success: false,
+                message: 'Your token is not valid',
+            });
+        }
+    } catch (e) {
+        res.status(200).json({
+            success: false,
+            message: 'Your token is not valid',
+        });
+    }
+});
+
+/**
+ * @swagger
+ * /v1/users/my-infos:
+ *   get:
+ *     description: A manager get his events
+ *     tags:
+ *       - users
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *     responses:
+ *       200:
+ *         description: Request succesfully processed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     infos:
+ *                       type: object
+ *                       allOf:
+ *                         - $ref: '#/components/schemas/Participant'
+ *                         - type: object
+ *                           properties:
+ *                             verifiedEmail:
+ *                               type: boolean
+ *                               description: If the email is verified or not
+ *       401:
+ *         description: Not Authorized.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ *       501:
+ *         description: Internal server error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Response'
+ */
+router.get('/my-infos', check('Participant'), async function (req, res) {
+    try {
+        const user = await Participant.findById(req.user.id);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Your infos',
+            infos: {
+                ...user._doc,
+                password: undefined,
+                idExteralApi: undefined,
+            },
+        });
+    } catch (e) {
+        res.status(501).json({ success: false, message: e.toString() });
+    }
+});
+
+module.exports = router;

@@ -9,6 +9,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const usersRouter = require('./routes/v1/users');
+const eventRouter = require('./routes/v1/events');
+const privateEventRouter = require('./routes/v1/private-events');
 
 // options for the openapi documentation
 const swaggerOptionsV1 = {
@@ -25,19 +27,14 @@ const swaggerOptionsV1 = {
 // create s swagger document from the JsDocs
 const swaggerDocument = swaggerJsDoc(swaggerOptionsV1);
 
-// connect to database
-mongoose
-    .connect(process.env.MONGODB_URL)
-    .then(() => console.log('Connected to mongodb'));
-
 // create express app
 const app = express();
 
 // use looger for debug infos
-app.use(logger('dev'));
+app.use(logger('dev', { skip: () => process.env.NODE_ENV === 'test' }));
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
 
 app.use(cors());
 
@@ -46,5 +43,9 @@ app.use('/api-docs/v1', swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 
 // serve apis for users
 app.use('/v1/users', usersRouter);
+// serve apis for events
+app.use('/v1/events', eventRouter);
+// serve apis for private-events
+app.use('/v1/private-events', privateEventRouter);
 
 module.exports = app;
