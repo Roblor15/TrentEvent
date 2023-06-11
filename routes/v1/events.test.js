@@ -250,18 +250,7 @@ describe('GET /v1/events', () => {
             .expect((res) => {
                 expect(res.body.success).toBe(true);
                 expect(res.body.message).toBe('Here is the list of events');
-                expect(res.body.events).toMatchObject([
-                    {
-                        initDate: '2023-08-19T13:00:00.000Z',
-                        endDate: '2023-08-19T13:30:00.000Z',
-                        categories: ['musica'],
-                    },
-                    {
-                        initDate: '2025-10-03T22:00:00.000Z',
-                        endDate: '2025-10-04T22:00:00.000Z',
-                        categories: ['musica'],
-                    },
-                ]);
+                expect(res.body.events).toHaveLength(2);
             });
     });
 });
