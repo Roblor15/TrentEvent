@@ -47,7 +47,7 @@ const managerSchema = new Schema({
     },
     photos: {
         type: [Schema.Types.ObjectId],
-        ref: 'Manager.photos',
+        ref: 'Photo',
     },
     approvation: {
         type: {

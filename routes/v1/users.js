@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const Manager = require('../../models/manager');
 const Participant = require('../../models/participant');
 const Supervisor = require('../../models/supervisor');
+const Photo = require('../../models/photo');
 
 const sendMail = require('../../lib/notify');
 const { verify } = require('../../lib/facebook-auth');
@@ -94,6 +95,16 @@ router.post(
                     .status(200)
                     .json({ success: false, message: 'Email already used' });
 
+            const photos = await Photo.insertMany(
+                req.files
+                    // filter images
+                    .filter((p) => p.mimetype.startsWith('image'))
+                    .map((p) => ({
+                        data: p.buffer,
+                        contentType: p.mimetype,
+                    }))
+            );
+
             // create a Manager instance
             const result = await Manager.create({
                 // with all attributes of body
@@ -103,13 +114,7 @@ router.post(
                 // convert address from String to Object
                 address: JSON.parse(address),
                 // retrieve photos sended
-                photos: req.files
-                    // filter images
-                    .filter((p) => p.mimetype.startsWith('image'))
-                    .map((p) => ({
-                        data: p.buffer,
-                        contentType: p.mimetype,
-                    })),
+                photos: photos.map((p) => p._id),
             });
 
             // send email with the link to conferm the email address
