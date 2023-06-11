@@ -126,8 +126,6 @@ describe('PUT /v1/events/{id}/subscribe', () => {
             });
     });
 });
-// TODO expect(res.body.success).toBe(false);
-// expect(res.body.message).toBe('');.
 
 describe('POST /v1/events', () => {
     const Manager = require('../../models/manager');

@@ -5,6 +5,7 @@ const router = express.Router();
 const Report = require('../../models/report');
 
 const { check } = require('../../lib/authorization');
+const checkProperties = require('../../lib/check-properties');
 
 /**
  * @swagger
@@ -22,7 +23,13 @@ const { check } = require('../../lib/authorization');
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#components/schemas/Report
+ *             type: object
+ *             required: ["eventId"]
+ *             properties:
+ *               eventId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: id of the event
  *     responses:
  *       200:
  *         description: Request succesfully processed.
@@ -49,31 +56,36 @@ const { check } = require('../../lib/authorization');
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/', check('Participant'), async function (req, res) {
-    try {
-        const event = await Event.findById(req.body.eventId);
-        let result;
-        if (event) {
-            result = await Report.create({
-                ...req.body,
-                participant: req.user.id,
-                event: req.user.eventIdd,
-            });
-            res.status(200).json({
-                success: true,
-                message: 'Report created',
-                participantId: result._id.toString(),
-            });
-        } else {
-            res.status(200).json({
-                success: false,
-                message: 'Event no found',
-            });
+router.post(
+    '/',
+    check('Participant'),
+    checkProperties(['eventId']),
+    async function (req, res) {
+        try {
+            const event = await Event.findById(req.body.eventId);
+            let result;
+            if (event) {
+                result = await Report.create({
+                    ...req.body,
+                    participant: req.user.id,
+                    event: req.user.eventIdd,
+                });
+                res.status(200).json({
+                    success: true,
+                    message: 'Report created',
+                    participantId: result._id.toString(),
+                });
+            } else {
+                res.status(200).json({
+                    success: false,
+                    message: 'Event no found',
+                });
+            }
+        } catch (e) {
+            res.status(501).json({ success: false, message: e.toString() });
         }
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
     }
-});
+);
 
 /**
  * @swagger

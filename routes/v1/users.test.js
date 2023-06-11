@@ -5,6 +5,7 @@ const request = require('supertest');
 
 const Manager = require('../../models/manager');
 const Participant = require('../../models/participant');
+const Supervisor = require('../../models/supervisor');
 
 const base = '/v1/users/';
 
@@ -106,87 +107,12 @@ describe('POST ' + base + 'signup-manager', () => {
     });
 });
 
-describe('PUT ' + base + 'signup-manager', () => {
-    const url = base + 'signup-manager';
-
-    let managerSpy;
-    beforeAll(() => {
-        const address = {
-            country: 'Italia',
-            city: 'Trento',
-            street: 'via bella',
-            number: 1,
-            cap: '00000',
-        };
-        managerSpy = jest
-            .spyOn(Manager, 'findById')
-            .mockImplementation((id) => {
-                if (id === 1000)
-                    return {
-                        _id: id,
-                        verifiedEmail: true,
-                        localName: 'ciao',
-                        address,
-                        localType: 'bar',
-                        save: async () => {},
-                    };
-                if (id === 1001)
-                    return {
-                        _id: id,
-                        verifiedEmail: false,
-                        localName: 'ciao',
-                        address,
-                        localType: 'bar',
-                        save: async () => {},
-                    };
-            });
-    });
-
-    afterAll(() => {
-        managerSpy.mockRestore();
-    });
-
-    test('PUT ' + url + ' right request', () => {
-        return request(app)
-            .put(url)
-            .send({ id: 1000, approved: true })
-            .expect(200)
-            .expect((res) => {
-                expect(res.body.success).toBe(true);
-                expect(res.body.message).toBe("Manager's request updated");
-            });
-    });
-
-    test('PUT ' + url + ' user does not exist', () => {
-        return request(app)
-            .put(url)
-            .send({ id: 1100, approved: true })
-            .expect(501)
-            .expect((res) => {
-                expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe('Error: User not found');
-            });
-    });
-
-    test('PUT ' + url + " user's email not verified", () => {
-        return request(app)
-            .put(url)
-            .send({ id: 1001, approved: true })
-            .expect(200)
-            .expect((res) => {
-                expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe(
-                    "Manager's email is not confermed"
-                );
-            });
-    });
-});
-
 describe('POST ' + base + 'signup-user', () => {
     const url = base + 'signup-user';
     let participantSpyFind;
     let participantSpyCreate;
     let managerSpy;
+    let supervisorSpy;
 
     const fakeUser = {
         name: 'ciao',
@@ -216,12 +142,18 @@ describe('POST ' + base + 'signup-user', () => {
                 if (email === 'ciao@ciao.it') return { email };
                 return;
             });
+        supervisorSpy = jest
+            .spyOn(Supervisor, 'findOne')
+            .mockImplementation(() => {
+                return;
+            });
     });
 
     afterAll(() => {
         participantSpyFind.mockRestore();
         participantSpyCreate.mockRestore();
         managerSpy.mockRestore();
+        supervisorSpy.mockRestore();
     });
 
     test('POST ' + url + ' right request', () => {
@@ -277,6 +209,7 @@ describe('POST ' + base + 'login', () => {
     const url = base + 'login';
     let participantSpy;
     let managerSpy;
+    let supervisorSpy;
 
     beforeAll(() => {
         participantSpy = jest
@@ -316,11 +249,17 @@ describe('POST ' + base + 'login', () => {
                     };
                 return;
             });
+        supervisorSpy = jest
+            .spyOn(Supervisor, 'findOne')
+            .mockImplementation(() => {
+                return;
+            });
     });
 
     afterAll(() => {
         participantSpy.mockRestore();
         managerSpy.mockRestore();
+        supervisorSpy.mockRestore();
     });
 
     test('POST ' + url + ' participant login with email', () => {
