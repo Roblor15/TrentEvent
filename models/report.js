@@ -15,8 +15,9 @@ const reportSchema = new Schema({
     },
     event: {
         type: Schema.Types.ObjectId,
-        ref: 'Participant',
+        ref: 'Event',
         required: true,
-    }
+    },
 });
+
 module.exports = mongoose.model('Report', reportSchema);

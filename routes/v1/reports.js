@@ -2,7 +2,6 @@ const express = require('express');
 
 const router = express.Router();
 
-
 const Report = require('../../models/report');
 
 const { check } = require('../../lib/authorization');
@@ -52,17 +51,25 @@ const { check } = require('../../lib/authorization');
  */
 router.post('/report', check('Participant'), async function (req, res) {
     try {
-        const event = await Event.findById(req.params.id);
+        const event = await Event.findById(req.body.eventId);
         let result;
         if (event) {
             result = await Report.create({
                 ...req.body,
+                participant: req.user.id,
+                event: req.user.eventIdd,
+            });
+            res.status(200).json({
+                success: true,
+                message: 'Report created',
+                participantId: result._id.toString(),
+            });
+        } else {
+            res.status(200).json({
+                success: false,
+                message: 'Event no found',
             });
         }
-        res.status(200).json({
-            success: true,
-            participantId: result._id.toString(),
-        });
     } catch (e) {
         res.status(501).json({ success: false, message: e.toString() });
     }
@@ -97,18 +104,15 @@ router.post('/report', check('Participant'), async function (req, res) {
  */
 router.get('/', async function (req, res) {
     try {
-        const report = await Report.find();
+        const reports = await Report.find();
 
         res.status(200).json({
             success: true,
             message: 'Here are the reports of the events',
-            reports:{
-                reportText: report.reportText,
-                participant: report.participant,
-                manager: report.manager,
-            },
+            reports,
         });
     } catch (e) {
         res.status(501).json({ success: false, message: e.toString() });
     }
 });
+
