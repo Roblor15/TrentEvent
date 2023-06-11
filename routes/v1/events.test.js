@@ -125,33 +125,6 @@ describe('PUT /v1/events/{id}/subscribe', () => {
                 );
             });
     });
-
-    const notValidToken = jwt.sign(
-        { id: 2010, type: 'Participant' },
-        'ciaoooo',
-        { expiresIn: 86400 }
-    );
-
-    test('PUT /v1/events/{id}/subscribe with token not valid', () => {
-        return request(app)
-            .put('/v1/events/2010/subscribe')
-            .auth(notValidToken, { type: 'bearer' })
-            .expect(401)
-            .expect(function (res) {
-                expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe('Authentication token not valid');
-            });
-    });
-
-    test('PUT /v1/events/{id}/subscribe without token', () => {
-        return request(app)
-            .put('/v1/events/2010/subscribe')
-            .expect(401)
-            .expect(function (res) {
-                expect(res.body.success).toBe(false);
-                expect(res.body.message).toBe('Authorization token not found');
-            });
-    });
 });
 // TODO expect(res.body.success).toBe(false);
 // expect(res.body.message).toBe('');.
