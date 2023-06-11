@@ -70,7 +70,8 @@ router.post(
             let result;
             if (event) {
                 result = await Report.create({
-                    ...req.body,
+                    reportText: req.body.reportText,
+                    event: req.body.eventId,
                     participant: req.user.id,
                 });
                 res.status(200).json({
