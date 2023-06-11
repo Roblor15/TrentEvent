@@ -1,6 +1,7 @@
 const express = require('express');
 
 const Manager = require('../../models/manager');
+
 const checkProperties = require('../../lib/check-properties');
 const { check } = require('../../lib/authorization');
 const { generatePassword } = require('../../lib/general');
@@ -10,7 +11,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /v1/supervisors/manager-approvation:
+ * /v1/supervisors/manager-approvation/{id}:
  *   put:
  *     description: Accept or deny the request to become Events Mangager.
  *     tags:
@@ -19,18 +20,22 @@ const router = express.Router();
  *       type: http
  *       scheme: bearer
  *       bearerFormat: JWT
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         required: true
+ *         description: Id of manager
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required: ["id", "approved"]
+ *             required: ["approved"]
  *             properties:
- *               id:
- *                 type: string
- *                 format: uuid
- *                 description: The id of the request to approve.
  *               approved:
  *                 type: boolean
  *                 description: If the request is approved or not.
@@ -69,16 +74,16 @@ const router = express.Router();
  *               $ref: '#/components/schemas/Response'
  */
 router.put(
-    '/manager-approvation',
+    '/manager-approvation/:id',
     check('Supervisor'),
-    checkProperties(['id', 'approved']),
+    checkProperties(['approved']),
     async function (req, res) {
         try {
             // retrieve id and approved from body
-            const { id, approved } = req.body;
+            const { approved } = req.body;
 
             // find and update the manager
-            const user = await Manager.findById(id);
+            const user = await Manager.findById(req.params.id);
 
             // throw an error if user not found
             if (!user) throw new Error('User not found');
