@@ -13,6 +13,7 @@ const privateEventRouter = require('./routes/v1/private-events');
 const supervisorRouter = require('./routes/v1/supervisors');
 const reportRouter = require('./routes/v1/reports');
 const photoRouter = require('./routes/v1/photos');
+const managerRouter = require('./routes/v1/managers');
 
 // options for the openapi documentation
 const swaggerOptionsV1 = {
@@ -51,6 +52,8 @@ app.use('/v1/events', eventRouter);
 app.use('/v1/private-events', privateEventRouter);
 // serve apis for supervisors
 app.use('/v1/supervisors', supervisorRouter);
+// serve apis for managers
+app.use('v1/managers', managerRouter);
 // serve apis for reportRouter
 app.use('/v1/reports', reportRouter);
 // serve apis for photos
