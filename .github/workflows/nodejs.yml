@@ -39,4 +39,4 @@ jobs:
         needs: test
         steps:
             - name: Trigger deployment
-            - run: curl --request POST --url ${{ secrets.RENDER_HOOK }}
+              run: curl -x POST -d {} ${{ secrets.RENDER_HOOK }}
