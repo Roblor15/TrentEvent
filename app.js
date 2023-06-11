@@ -53,7 +53,7 @@ app.use('/v1/private-events', privateEventRouter);
 // serve apis for supervisors
 app.use('/v1/supervisors', supervisorRouter);
 // serve apis for managers
-app.use('v1/managers', managerRouter);
+app.use('/v1/managers', managerRouter);
 // serve apis for reportRouter
 app.use('/v1/reports', reportRouter);
 // serve apis for photos
