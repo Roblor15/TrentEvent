@@ -54,14 +54,11 @@ const { check } = require('../../lib/authorization');
  */
 router.post('/report', check('Participant'), async function (req, res) {
     try {
-        const { id } = req.user;
-        const participant = await Participant.findById(id);
         const event = await Event.findById(req.params.id);
         let result;
         if (event) {
             result = await Report.create({
                 ...req.body,
-                participant: id,
             });
         }
         res.status(200).json({

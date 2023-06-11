@@ -21,10 +21,6 @@ const supervisorSchema = new Schema({
         bcrypt: true,
         minLength: 5,
     },
-    isSupervisor:{
-        type:Boolean,
-        default: false,
-    }
 });
 
 supervisorSchema.plugin(bcrypt);

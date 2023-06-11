@@ -11,6 +11,12 @@ const reportSchema = new Schema({
     participant: {
         type: Schema.Types.ObjectId,
         ref: 'Participant',
+        required: true,
     },
+    event: {
+        type: Schema.Types.ObjectId,
+        ref: 'Participant',
+        required: true,
+    }
 });
 module.exports = mongoose.model('Report', reportSchema);
