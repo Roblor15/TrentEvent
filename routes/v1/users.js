@@ -331,24 +331,26 @@ router.post(
                     email: req.body.credential,
                 });
 
-                // control if manager was approved
-                if (user.approvation === undefined)
-                    return res.status(200).json({
-                        success: false,
-                        message: "Manager's request is not approved yet",
-                    });
-                if (user.approvation.approved === false)
-                    return res.status(200).json({
-                        success: false,
-                        message: "Manager's request is not approved",
-                    });
+                if (user) {
+                    // control if manager was approved
+                    if (user.approvation === undefined)
+                        return res.status(200).json({
+                            success: false,
+                            message: "Manager's request is not approved yet",
+                        });
+                    if (user.approvation.approved === false)
+                        return res.status(200).json({
+                            success: false,
+                            message: "Manager's request is not approved",
+                        });
 
-                // change type to Manager
-                type = 'Manager';
+                    // change type to Manager
+                    type = 'Manager';
+                }
             }
 
             if (!user) {
-                user = await Participant.findOne({
+                user = await Supervisor.findOne({
                     email: req.body.credential,
                 });
 

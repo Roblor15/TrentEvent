@@ -8,12 +8,12 @@ const { check } = require('../../lib/authorization');
 
 /**
  * @swagger
- * /v1/report:
+ * /v1/reports:
  *   post:
  *     summary: Report an event
  *     description: A participant reports an event
  *     tags:
- *       - Report
+ *       - reports
  *     security:
  *       type: http
  *       scheme: bearer
@@ -49,7 +49,7 @@ const { check } = require('../../lib/authorization');
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-router.post('/report', check('Participant'), async function (req, res) {
+router.post('/', check('Participant'), async function (req, res) {
     try {
         const event = await Event.findById(req.body.eventId);
         let result;
@@ -77,7 +77,7 @@ router.post('/report', check('Participant'), async function (req, res) {
 
 /**
  * @swagger
- * /v1/report/:
+ * /v1/reports/:
  *   get:
  *     description: check reports
  *     tags:
@@ -115,6 +115,5 @@ router.get('/', check('Supervisor'), async function (req, res) {
         res.status(501).json({ success: false, message: e.toString() });
     }
 });
-
 
 module.exports = router;
