@@ -2,7 +2,6 @@ const express = require('express');
 const logger = require('morgan');
 const swaggerUI = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
-const mongoose = require('mongoose');
 const cors = require('cors');
 
 // retrieve environments variables from .env file
@@ -12,6 +11,7 @@ const usersRouter = require('./routes/v1/users');
 const managerRouter = require('./routes/v1/managers');
 const eventRouter = require('./routes/v1/events');
 const privateEventRouter = require('./routes/v1/private-events');
+const photoRouter = require('./routes/v1/photos');
 
 // options for the openapi documentation
 const swaggerOptionsV1 = {
@@ -50,5 +50,7 @@ app.use('/v1/managers', managerRouter);
 app.use('/v1/events', eventRouter);
 // serve apis for private-events
 app.use('/v1/private-events', privateEventRouter);
+// serve apis for photos
+app.use('/v1/photos', photoRouter);
 
 module.exports = app;

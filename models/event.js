@@ -30,6 +30,7 @@ const eventSchema = new Schema({
     },
     photos: {
         type: [Schema.Types.ObjectId],
+        ref: 'Manager.photos',
     },
     description: {
         type: String,

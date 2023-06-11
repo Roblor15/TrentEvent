@@ -82,7 +82,7 @@
  *         localType:
  *           type: string
  *           description: The type of the local.
- *           example: Bar
+ *           example: bar
  *     Event:
  *       type: object
  *       required: ["initDate", "endDate", "name", "description"]
