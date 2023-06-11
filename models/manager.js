@@ -53,8 +53,8 @@ const managerSchema = new Schema({
         type: {
             approved: { type: Boolean, default: false },
             when: Date,
-            // TODO: from: { type: Schema.Types.ObjectId, ref: 'Supervisor' },
-            from: { type: Schema.Types.ObjectId },
+            type: Schema.Types.ObjectId,
+            ref: 'Supervisor' ,
             _id: false,
         },
     },

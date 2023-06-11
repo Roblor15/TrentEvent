@@ -92,6 +92,7 @@ router.put(
             if (user.verifiedEmail) {
                 user.approvation = {
                     approved,
+                    from: req.user.id,
                     when: Date.now(),
                 };
 
@@ -157,18 +158,47 @@ router.put(
 
 /**
  * @swagger
- * /v1/report/:
+ * /v1/supervisors/manager:
  *   get:
  *     description: check managers
  *     tags:
  *       - managers
+ *     security:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
  *     responses:
  *       200:
  *         description: Request succesfully processed.
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Response'
+ *               allOf:
+ *                 - $ref: '#/components/schemas/Response'
+ *                 - type: object
+ *                   properties:
+ *                     managers:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         allOf:
+ *                           - $ref: '#/components/schemas/Manager'
+ *                           - type: object
+ *                             properties:
+ *                               photos:
+ *                                 type: array
+ *                                 description: Array Id of manager's photos
+ *                                 items:
+ *                                   type: string
+ *                                   format: uuid
+ *                               approvation:
+ *                                  type: object
+ *                                  properties:
+ *                                    approved: boolean
+ *                                    when:
+ *                                     type: string
+ *                                     format: date-time
+ *                                     description: The data of the approval 
  *       401:
  *         description: Not Authorized.
  *         content:
