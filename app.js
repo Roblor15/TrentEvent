@@ -10,12 +10,9 @@ require('dotenv').config();
 const usersRouter = require('./routes/v1/users');
 const eventRouter = require('./routes/v1/events');
 const privateEventRouter = require('./routes/v1/private-events');
-<<<<<<< HEAD
 const supervisorRouter = require('./routes/v1/supervisors');
 const reportRouter = require('./routes/v1/reports');
-=======
 const photoRouter = require('./routes/v1/photos');
->>>>>>> photo
 
 // options for the openapi documentation
 const swaggerOptionsV1 = {
@@ -52,14 +49,11 @@ app.use('/v1/users', usersRouter);
 app.use('/v1/events', eventRouter);
 // serve apis for private-events
 app.use('/v1/private-events', privateEventRouter);
-<<<<<<< HEAD
 // serve apis for supervisors
 app.use('/v1/supervisors', supervisorRouter);
 // serve apis for reportRouter
 app.use('/v1/reports', reportRouter);
-=======
 // serve apis for photos
 app.use('/v1/photos', photoRouter);
->>>>>>> photo
 
 module.exports = app;
