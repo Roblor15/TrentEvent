@@ -220,34 +220,6 @@ router.get('/:id', check('Participant'), async function (req, res) {
  *            schema:
  *               $ref: '#/components/schemas/Response'
  */
-<<<<<<< HEAD
-router.post('/', check('Participant'), async function (req, res) {
-    try {
-        const { address } = req.body;
-
-        const result = await PrivateEvent.create({
-            // requests all the attributes of the body
-            ...req.body,
-            address: JSON.parse(address),
-            photos: req.files
-                // filter images
-                ?.filter((p) => p.mimetype.startsWith('image'))
-                .map((p) => ({
-                    data: p.buffer,
-                    contentType: p.mimetype,
-                })),
-        });
-        res.status(200).json({
-            initDate: result.initDate,
-            endDate: result.endDate,
-            address: result.address,
-            price: result.price,
-            description: result.description,
-            message: 'event created',
-        });
-    } catch (e) {
-        res.status(501).json({ success: false, message: e.toString() });
-=======
 router.post(
     '/',
     check('Participant'),
@@ -256,6 +228,7 @@ router.post(
         try {
             const result = await PrivateEvent.create({
                 // get all the attributes of the body
+                creator: req.user.id,
                 ...req.body,
             });
 
@@ -267,7 +240,6 @@ router.post(
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
         }
->>>>>>> f80d5b6a036138a623c2f5a22428a360b121caba
     }
 );
 
@@ -337,27 +309,7 @@ router.put(
         try {
             const event = await PrivateEvent.findById(req.params.id);
 
-<<<<<<< HEAD
-        if (event.creator !== req.user.id) {
-            return res.status(200).json({
-                success: false,
-                message: 'You are not the owner of the event',
-            });
-        }
-        for (const user of req.body.invites) {
-            let u;
-            if (isEmail(user)) {
-                u = await Participant.findOne({
-                    email: user.email,
-                });
-            } else {
-                u = await Participant.findOne({
-                    username: user.username,
-                });
-            }
-            event.participantsList.push({ user: u._id, state: 'Pending' });
-=======
-            if (!event.creator.equals(req.user.id)) {
+            if (event.creator != req.user.id) {
                 return res.status(200).json({
                     success: false,
                     message: 'You are not the owner of the event',
@@ -387,7 +339,6 @@ router.put(
             });
         } catch (e) {
             res.status(501).json({ success: false, message: e.toString() });
->>>>>>> f80d5b6a036138a623c2f5a22428a360b121caba
         }
     }
 );
@@ -448,19 +399,6 @@ router.put(
  *             schema:
  *               $ref: '#/components/schemas/Response'
  */
-<<<<<<< HEAD
-router.put('/:id/responde', check('Participant'), async function (req, res) {
-    try {
-        const event = await PrivateEvent.findById(req.params.id);
-
-        const invitation = event.participantsList.findIndex(({ user }) => {
-            return user == req.user.id;
-        });
-
-        if (invitation >= 0) {
-            if (req.body.accept) {
-                event.participantsList[invitation].state = 'Accepted';
-=======
 router.put(
     '/:id/responde',
     check('Participant'),
@@ -469,7 +407,7 @@ router.put(
         try {
             const event = await PrivateEvent.findById(req.params.id);
             const invitation = event.participantsList.findIndex(
-                ({ user }) => user.user === req.user.id
+                ({ user }) => user == req.user.id
             );
 
             if (invitation > 0) {
@@ -482,7 +420,6 @@ router.put(
                 return res
                     .status(200)
                     .json({ success: true, message: 'Your response is saved' });
->>>>>>> f80d5b6a036138a623c2f5a22428a360b121caba
             } else {
                 res.status(200).json({
                     success: false,
